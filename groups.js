@@ -1,0 +1,364 @@
+(function() { const _dp = JSON.parse(localStorage.getItem('draftPunkData') || '{}'); const _ok = _dp.activeProjectId && _dp.projects && _dp.projects[_dp.activeProjectId] && _dp.projects[_dp.activeProjectId].active; if (!_ok) window.location.replace('index.html'); })();
+
+// ── Safe output ───────────────────────────────────────────────────────────────
+// Names, titles and shared chapters come from other writers, so everything is
+// escaped, and shared chapter text is reduced to the editor's own formatting.
+function esc(str) {
+    return String(str == null ? '' : str).replace(/&/g, '&amp;').replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+}
+const SAFE_TAGS = new Set(['B','STRONG','I','EM','U','H2','H3','P','BR','DIV']);
+function safeChapterHtml(html) {
+    const tpl = document.createElement('template');
+    tpl.innerHTML = String(html || '');
+    const clean = node => {
+        [...node.childNodes].forEach(n => {
+            if (n.nodeType === 1) {
+                if (!SAFE_TAGS.has(n.tagName)) {
+                    if (/^(SCRIPT|STYLE|IFRAME|OBJECT|EMBED|TEMPLATE|SVG|MATH)$/.test(n.tagName)) { n.remove(); return; }
+                    clean(n);
+                    n.replaceWith(...n.childNodes);
+                    return;
+                }
+                [...n.attributes].forEach(a => n.removeAttribute(a.name));
+                clean(n);
+            } else if (n.nodeType !== 3) n.remove();
+        });
+    };
+    clean(tpl.content);
+    const div = document.createElement('div'); div.appendChild(tpl.content);
+    return div.innerHTML;
+}
+
+// ── Auth handling ─────────────────────────────────────────────────────────────
+function handleAuthState(user) {
+    if (!user) {
+        document.getElementById('groupsSignInGate').style.display = 'block';
+        document.getElementById('groupsContent').style.display    = 'none';
+    } else {
+        document.getElementById('groupsSignInGate').style.display = 'none';
+        document.getElementById('groupsContent').style.display    = 'block';
+        loadAll();
+    }
+}
+
+// React to auth state dispatched by sync.js
+document.addEventListener('dpAuthChanged', function(e) {
+    handleAuthState(e.detail.user);
+});
+
+// Fallback: if auth already resolved before this listener registered
+document.addEventListener('DOMContentLoaded', function() {
+    const user = window.getCurrentUser && window.getCurrentUser();
+    if (user !== undefined) handleAuthState(user);
+});
+
+// ── Load everything ───────────────────────────────────────────────────────────
+function loadAll() {
+    loadPendingRequests();
+    loadFriends();
+    loadSharedWithMe();
+    loadLeaderboard();
+    loadMyGroups();
+}
+
+// ── My groups: word counts per group ─────────────────────────────────────────
+let groupPeriod = 'week';
+let _myGroups = [];
+const _groupStats = {};
+
+window.setGroupPeriod = function(period) {
+    groupPeriod = period;
+    document.querySelectorAll('.grp-period-btn').forEach(b => b.classList.toggle('lb-period-active', b.dataset.gperiod === period));
+    renderMyGroups();
+};
+
+async function loadMyGroups() {
+    const container = document.getElementById('myGroupsList');
+    if (!container || !window.getMyGroups) return;
+    container.innerHTML = '<div class="lb-loading">LOADING...</div>';
+    const groups = await window.getMyGroups();
+    if (!Array.isArray(groups)) { container.innerHTML = '<div class="lb-empty">COULD NOT LOAD GROUPS</div>'; return; }
+    _myGroups = groups.sort((a, b) => String(a.name).localeCompare(String(b.name)));
+    await Promise.all(_myGroups.map(async g => { _groupStats[g.id] = await window.getGroupStats(g); }));
+    renderMyGroups();
+}
+
+function renderMyGroups() {
+    const container = document.getElementById('myGroupsList');
+    if (!container) return;
+    if (!_myGroups.length) {
+        container.innerHTML = '<div class="lb-empty">YOU\'RE NOT IN ANY GROUPS YET — USE ＋ NEW GROUP TO START ONE WITH YOUR FRIENDS</div>';
+        return;
+    }
+    const field = PERIOD_FIELD[groupPeriod] || 'totalWords';
+    const me = window.getCurrentUser && window.getCurrentUser();
+    container.innerHTML = _myGroups.map(g => {
+        const rows = (_groupStats[g.id] || []).slice().sort((a, b) => (b[field] || 0) - (a[field] || 0));
+        const total = rows.reduce((s, r) => s + (r[field] || 0), 0);
+        return `<div class="grp-card" data-id="${esc(g.id)}">
+            <div class="grp-head">
+                <span class="grp-name">${esc(g.name)}</span>
+                <span class="grp-total">${total.toLocaleString()} WDS TOGETHER</span>
+                <a class="grp-chat" href="messages.html#group=${encodeURIComponent(g.id)}">OPEN CHAT</a>
+            </div>
+            ${rows.map((r, i) => `<div class="lb-row ${me && r.uid === me.uid ? 'lb-row-me' : ''}">
+                <span class="lb-rank">#${i + 1}</span>
+                <span class="lb-name">${esc(r.username)}</span>
+                <span class="lb-words">${(r[field] || 0).toLocaleString()} WDS</span>
+            </div>`).join('')}
+        </div>`;
+    }).join('');
+}
+
+// ── Pending friend requests ───────────────────────────────────────────────────
+async function loadPendingRequests() {
+    const section   = document.getElementById('pendingRequestsSection');
+    const container = document.getElementById('pendingRequestsList');
+    if (!section || !container) return;
+
+    const result = await window.getPendingRequests();
+
+    if (!result || result.error || result.length === 0) {
+        section.style.display = 'none';
+        return;
+    }
+
+    section.style.display = 'block';
+    container.innerHTML = result.map(req => `
+        <div class="lb-row" style="gap:8px;">
+            <span class="lb-name" style="flex:1;">${esc(req.fromUsername || 'UNKNOWN')}</span>
+            <button data-id="${esc(req.id)}" data-from="${esc(req.from)}" onclick="doAccept(this.dataset.id, this.dataset.from)"
+                style="font-size:0.7rem;padding:6px 10px;letter-spacing:1px;white-space:nowrap;">
+                ✓ ACCEPT
+            </button>
+            <button data-id="${esc(req.id)}" onclick="doDecline(this.dataset.id)"
+                style="font-size:0.7rem;padding:6px 10px;letter-spacing:1px;background:#333;white-space:nowrap;">
+                ✕ DECLINE
+            </button>
+        </div>
+    `).join('');
+
+    window.updateRequestBadge(result.length);
+}
+
+window.doAccept = async function(requestId, fromUid) {
+    const result = await window.acceptFriendRequest(requestId, fromUid);
+    if (result.success) {
+        loadPendingRequests();
+        loadFriends();
+    } else {
+        alert(result.error || 'Could not accept request.');
+    }
+};
+
+window.doDecline = async function(requestId) {
+    const result = await window.declineFriendRequest(requestId);
+    if (result.success) loadPendingRequests();
+};
+
+// ── Leaderboard ───────────────────────────────────────────────────────────────
+const PERIOD_FIELD = {
+    week:  'wordsThisWeek',
+    month: 'wordsThisMonth',
+    year:  'wordsThisYear',
+    all:   'totalWords'
+};
+let currentPeriod = 'week';
+
+window.setLeaderboardPeriod = function(period) {
+    currentPeriod = period;
+    document.querySelectorAll('.lb-period-btn').forEach(btn => {
+        btn.classList.toggle('lb-period-active', btn.dataset.period === period);
+    });
+    loadLeaderboard();
+};
+
+async function loadLeaderboard() {
+    const container = document.getElementById('leaderboardList');
+    if (!container) return;
+    container.innerHTML = '<div class="lb-loading">LOADING...</div>';
+
+    const field  = PERIOD_FIELD[currentPeriod] || 'totalWords';
+    const result = await window.getLeaderboard(field);
+
+    if (!result || result.error) {
+        container.innerHTML = '<div class="lb-empty">COULD NOT LOAD LEADERBOARD</div>';
+        return;
+    }
+
+    const active = result.filter(u => (u[field] || 0) > 0);
+    if (active.length === 0) {
+        container.innerHTML = '<div class="lb-empty">NO ENTRIES FOR THIS PERIOD YET</div>';
+        return;
+    }
+
+    const currentUser = window.getCurrentUser();
+    container.innerHTML = active.map((u, i) => `
+        <div class="lb-row ${currentUser && u.uid === currentUser.uid ? 'lb-row-me' : ''}">
+            <span class="lb-rank">#${i + 1}</span>
+            <span class="lb-name">${esc(u.username)}</span>
+            <span class="lb-words">${(u[field] || 0).toLocaleString()} WDS</span>
+        </div>
+    `).join('');
+}
+
+// ── Friends list ──────────────────────────────────────────────────────────────
+let _friendsData = [];
+
+function renderFriends(list) {
+    const container = document.getElementById('friendsList');
+    if (!container) return;
+    if (list.length === 0) {
+        container.innerHTML = '<div class="lb-empty">NO MATCHES</div>';
+        return;
+    }
+    container.innerHTML = list.map(u => `
+        <div class="lb-row">
+            <span class="lb-rank">✦</span>
+            <span class="lb-name">${esc(u.username)}</span>
+            <span class="lb-words">${(u.totalWords || 0).toLocaleString()} WDS</span>
+            <button class="lb-remove-btn" data-uid="${esc(u.uid)}" data-name="${esc(u.username)}" onclick="doRemoveFriend(this.dataset.uid, this.dataset.name)">✕</button>
+        </div>
+    `).join('');
+}
+
+window.filterFriends = function(query) {
+    const q = query.trim().toUpperCase();
+    const filtered = q ? _friendsData.filter(u => u.username.toUpperCase().includes(q)) : _friendsData;
+    renderFriends(filtered);
+};
+
+async function loadFriends() {
+    const container = document.getElementById('friendsList');
+    if (!container) return;
+    container.innerHTML = '<div class="lb-loading">LOADING...</div>';
+
+    const result = await window.getFriends();
+
+    if (!result || result.error) {
+        container.innerHTML = '<div class="lb-empty">COULD NOT LOAD FRIENDS</div>';
+        return;
+    }
+    if (result.length === 0) {
+        container.innerHTML = '<div class="lb-empty">NO FRIENDS YET — ADD ONE ABOVE</div>';
+        return;
+    }
+
+    _friendsData = [...result].sort((a, b) => (b.totalWords || 0) - (a.totalWords || 0));
+    const searchVal = document.getElementById('friendsSearch');
+    const q = searchVal ? searchVal.value.trim().toUpperCase() : '';
+    const filtered = q ? _friendsData.filter(u => u.username.toUpperCase().includes(q)) : _friendsData;
+    renderFriends(filtered);
+}
+
+// ── Add friend ────────────────────────────────────────────────────────────────
+window.doAddFriend = async function() {
+    const input    = document.getElementById('friendUsernameInput');
+    const msg      = document.getElementById('addFriendMsg');
+    const username = input.value.trim();
+    if (!username) return;
+
+    msg.style.color = 'var(--text-dim)';
+    msg.textContent = 'SEARCHING...';
+
+    const result = await window.addFriend(username);
+    if (result.success) {
+        input.value     = '';
+        msg.style.color = 'var(--neon)';
+        msg.textContent = 'REQUEST SENT TO ' + username;
+    } else {
+        msg.style.color = '#ff4500';
+        msg.textContent = result.error || 'COULD NOT SEND REQUEST';
+    }
+    setTimeout(() => { msg.textContent = ''; }, 3000);
+};
+
+// ── Shared with me ────────────────────────────────────────────────────────────
+let _sharedWithMeData = [];
+
+async function loadSharedWithMe() {
+    const container = document.getElementById('sharedWithMeList');
+    if (!container) return;
+    container.innerHTML = '<div class="lb-loading">LOADING...</div>';
+
+    const result = await window.getSharedWithMe();
+
+    if (!result || result.error) {
+        container.innerHTML = '<div class="lb-empty">COULD NOT LOAD</div>';
+        return;
+    }
+    if (result.length === 0) {
+        container.innerHTML = '<div class="lb-empty">NOTHING SHARED WITH YOU YET</div>';
+        return;
+    }
+
+    _sharedWithMeData = result;
+    container.innerHTML = result.map(share => `
+        <div class="lb-row" style="flex-direction:column;align-items:flex-start;gap:4px;padding:10px;">
+            <div style="display:flex;width:100%;align-items:center;gap:8px;">
+                <span class="lb-name" style="flex:1;">${esc(share.chapterTitle)}</span>
+                <span class="lb-words">${(Number(share.wordCount) || 0).toLocaleString()} WDS</span>
+                <button data-id="${esc(share.id)}" onclick="viewShare(this.dataset.id)" style="font-size:0.7rem;padding:6px 10px;letter-spacing:1px;white-space:nowrap;">READ</button>
+            </div>
+            <div style="font-size:0.65rem;opacity:0.4;letter-spacing:1px;">${esc(share.projectTitle)} — FROM ${esc(share.ownerUsername)}${share.groupName ? ' · VIA GROUP ' + esc(share.groupName) : ''}</div>
+        </div>
+    `).join('');
+}
+
+window.viewShare = function(shareId) {
+    const share = _sharedWithMeData.find(s => s.id === shareId);
+    if (!share) return;
+    document.getElementById('shareViewTitle').textContent = share.chapterTitle.toUpperCase();
+    document.getElementById('shareViewMeta').textContent  = share.projectTitle + ' — BY ' + share.ownerUsername;
+    document.getElementById('shareViewContent').innerHTML = share.content ? safeChapterHtml(share.content) : '<em style="opacity:0.4;">No content.</em>';
+    document.getElementById('shareViewOverlay').style.display = 'flex';
+};
+
+window.closeShareView = function() {
+    document.getElementById('shareViewOverlay').style.display = 'none';
+};
+
+// ── Remove friend ─────────────────────────────────────────────────────────────
+window.doRemoveFriend = async function(uid, username) {
+    if (!confirm('Remove ' + username + ' from friends?')) return;
+    const result = await window.removeFriend(uid);
+    if (result.success) loadFriends();
+};
+
+// ── Create a group here ───────────────────────────────────────────────────────
+const GROUP_MAX = 12;
+
+let _newGroupPicker = null;
+window.toggleNewGroup = function(show) {
+    const panel = document.getElementById('grpNewPanel');
+    const open = show === undefined ? panel.style.display === 'none' : show;
+    panel.style.display = open ? '' : 'none';
+    document.getElementById('grpNewMsg').textContent = '';
+    if (!open) return;
+    const friends = _friendsData.map(f => ({ uid: f.uid, username: f.username }));
+    if (!_newGroupPicker) _newGroupPicker = createFriendPicker(document.getElementById('grpNewPicker'), { friends, max: GROUP_MAX - 1 });
+    else _newGroupPicker.setFriends(friends, []);
+    document.getElementById('grpNewName').focus();
+};
+
+window.createGroupHere = async function() {
+    const name   = document.getElementById('grpNewName').value.trim();
+    const picked = _newGroupPicker ? _newGroupPicker.getSelected() : [];
+    const msg    = document.getElementById('grpNewMsg');
+    if (!name)          { msg.textContent = 'GIVE THE GROUP A NAME'; return; }
+    if (!picked.length) { msg.textContent = 'CHOOSE AT LEAST ONE FRIEND'; return; }
+    if (picked.length > GROUP_MAX - 1) { msg.textContent = 'A GROUP CAN HAVE UP TO 12 PEOPLE INCLUDING YOU'; return; }
+    msg.textContent = 'CREATING...';
+    const r = await window.createGroup(name, picked);
+    if (r && r.success) {
+        document.getElementById('grpNewName').value = '';
+        if (_newGroupPicker) _newGroupPicker.reset();
+        toggleNewGroup(false);
+        await loadMyGroups();
+        const card = document.querySelector(`.grp-card[data-id="${CSS.escape(r.id)}"]`);
+        if (card) { card.classList.add('grp-card-new'); card.scrollIntoView({ block: 'nearest', behavior: 'smooth' }); }
+    } else {
+        msg.textContent = (r && r.error) || 'COULD NOT CREATE THE GROUP';
+    }
+};

@@ -1,0 +1,308 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <script src="_sandbox/sandbox-seed.js"></script>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>DRAFT PUNK</title>
+    <link rel="icon" href="DRAFTPUNK.png" type="image/png">
+    <link rel="stylesheet" href="style.css">
+    <script src="sentry.js"></script>
+    <link rel="manifest" href="manifest.json">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="Draft Punk">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js" defer></script>
+</head>
+<body>
+
+    <!-- Splash screen -->
+    <div id="splashScreen">
+        <img src="DRAFTPUNK.png" id="splashLogo" alt="Draft Punk">
+        <div id="splashTitle">DRAFT PUNK</div>
+        <div id="splashSub">YOUR WRITING. TRACKED. ANYWHERE.</div>
+    </div>
+
+    <nav class="app-nav">
+        <div class="nav-dropdown">
+            <button class="nav-dropdown-btn active" onclick="toggleDraftMenu()">DRAFT PUNK</button>
+            <div class="nav-dropdown-menu" id="draftMenu">
+                <a href="index.html?dashboard" class="nav-dropdown-item" style="color:var(--neon);">DRAFT PUNK</a>
+                <a href="wordrunner.html" class="nav-dropdown-item">WORDRUNNER</a>
+                <a href="groups.html" class="nav-dropdown-item">WRITING GROUPS</a>
+                <a href="messages.html" class="nav-dropdown-item">MESSAGES</a>
+            </div>
+        </div>
+        <a href="write.html" class="nav-center-btn">WRITE</a>
+        <div class="nav-dropdown" style="margin-left:auto;">
+            <button class="nav-dropdown-btn" onclick="toggleNotesMenu()">WRITE</button>
+            <div class="nav-dropdown-menu" id="notesMenu">
+                <a href="notes.html" class="nav-dropdown-item">NOTES</a>
+                <a href="beat-notes.html" class="nav-dropdown-item">BEATS</a>
+                <a href="characters.html" class="nav-dropdown-item">CHARACTERS</a>
+            </div>
+        </div>
+        <div class="nav-dropdown">
+            <button class="nav-dropdown-btn" onclick="toggleDataMenu()">··· <span id="syncDot" style="display:inline-block;width:7px;height:7px;border-radius:50%;margin-left:2px;vertical-align:middle;transition:background 0.4s;"></span></button>
+            <div class="nav-dropdown-menu" id="dataMenu">
+                <button class="nav-dropdown-item" id="themeToggle" onclick="toggleTheme()">LIGHT MODE</button>
+                <div style="border-top:1px solid var(--border);margin:2px 0;"></div>
+                <button class="nav-dropdown-item" onclick="exportData(); toggleDataMenu()">⬇ BACKUP</button>
+                <button class="nav-dropdown-item" onclick="triggerImport(); toggleDataMenu()">⬆ RESTORE</button>
+                <div style="border-top:1px solid var(--border);margin:2px 0;"></div>
+                <button id="navSignIn" class="nav-dropdown-item" onclick="signInWithGoogle(); toggleDataMenu()" style="color:var(--neon);">⊕ SIGN IN WITH GOOGLE</button>
+                <div id="navUserInfo" style="display:none;">
+                    <div class="nav-dropdown-item" style="display:flex;align-items:center;gap:8px;cursor:default;">
+                        <img id="navAvatar" src="" style="width:20px;height:20px;border-radius:50%;border:1px solid var(--neon);">
+                        <span id="navUserName" style="color:var(--neon);font-size:0.7rem;"></span>
+                    </div>
+                    <button class="nav-dropdown-item" onclick="signOutUser(); toggleDataMenu()">⊖ SIGN OUT</button>
+                </div>
+                <div style="border-top:1px solid var(--border);margin:2px 0;"></div>
+                <a href="privacy.html" class="nav-dropdown-item">PRIVACY POLICY</a>
+                <a href="terms.html" class="nav-dropdown-item">TERMS OF SERVICE</a>
+            </div>
+        </div>
+    </nav>
+
+    <input type="file" id="importFileInput" accept=".json" onchange="importData(event)" style="display:none;">
+
+    <div id="authScreen">
+        <h1>DRAFT PUNK</h1>
+        <img id="authLogo" src="DRAFTPUNK.png" alt="Draft Punk Logo">
+        <p style="font-size:0.75rem;opacity:0.5;letter-spacing:1px;margin-bottom:20px;">YOUR WRITING. TRACKED. ANYWHERE.</p>
+        <button onclick="signInWithGoogle()" style="width:100%;margin-bottom:10px;">⊕ SIGN IN WITH GOOGLE</button>
+        <button onclick="skipAuth()" class="install-btn" style="color:#555;border-color:#333;">CONTINUE WITHOUT SIGNING IN</button>
+        <p style="font-size:0.65rem;opacity:0.3;margin-top:16px;line-height:1.6;">Sign in to back up and sync across devices.</p>
+        <p style="font-size:0.6rem;opacity:0.25;margin-top:12px;line-height:1.8;">
+            By continuing you agree to our
+            <a href="terms.html" style="color:inherit;text-decoration:underline;">Terms of Service</a>
+            and
+            <a href="privacy.html" style="color:inherit;text-decoration:underline;">Privacy Policy</a>
+        </p>
+    </div>
+
+    <div id="setup" class="setup-screen" style="display:none;">
+        <h1>DRAFT PUNK</h1>
+        <img src="DRAFTPUNK.png" id="appLogo" alt="Draft Punk Logo">
+        <button class="install-btn hidden" onclick="installApp()">+ ADD TO HOME SCREEN</button>
+        <div class="input-group">
+            <input type="text" id="titleIn" placeholder="PROJECT TITLE">
+            <select id="genreIn">
+                <option value="urbanFantasy">URBAN FANTASY</option>
+                <option value="sciFi">SCI-FI</option>
+                <option value="fantasy">HIGH FANTASY</option>
+                <option value="horror">HORROR</option>
+                <option value="cyberpunk">CYBERPUNK</option>
+                <option value="crimeNoir">CRIME / NOIR</option>
+                <option value="romance">ROMANCE</option>
+                <option value="thriller">THRILLER</option>
+                <option value="western">WESTERN</option>
+            </select>
+            <input type="number" id="goalIn" placeholder="WORD GOAL">
+            <input type="date" id="deadlineIn">
+            <button onclick="start()">START</button>
+        </div>
+    </div>
+
+    <div id="mainDashboard" class="main-layout hidden">
+        <div class="app">
+            <h1 id="wipDisplay">PROJECT</h1>
+            <h2 id="lvlName">LEVEL</h2>
+
+            <div class="boss-zone">
+                <img id="bossSprite" class="boss-sprite" src="bosses/1.png" onclick="showBossZoom()" title="Click for info">
+                <div style="flex:1;">
+                    <div id="bossName">BOSS</div>
+                    <div class="bar-container" style="height:10px; margin-bottom:0; border-color: #333;">
+                        <div id="bossHPBar" class="bar-fill" style="background:red; width:100%;"></div>
+                    </div>
+                </div>
+            </div>
+
+            <button class="intel-btn" onclick="toggleIntel()">MICROBEAT TIPS ▾</button>
+            <div id="intelContainer" class="hidden">
+                <div id="loreBox" class="lore-container"></div>
+                <div id="tipsBox" class="tips-container"></div>
+            </div>
+
+            <div class="chart-shield">
+                <canvas id="velocityChart"></canvas>
+            </div>
+
+            <div class="wc-display">
+                <div class="wc-display-number" id="wcMain">0</div>
+                <div class="wc-display-label">WORDS WRITTEN</div>
+            </div>
+
+            <span class="bar-label">TOTAL PROGRESS</span>
+            <div class="bar-container">
+                <div id="hpBar" class="bar-fill"></div>
+            </div>
+            <div id="hpText">0 / 0</div>
+
+            <div class="input-zone">
+                <input type="number" id="wordIn" placeholder="WORDS">
+                <button onclick="addWords()">ADD</button>
+                <button onclick="showCorrectWords()" style="background:#333;">CORRECT</button>
+                <button onclick="showGrenade()" style="background:#ff4500; color:#fff;">GRENADE</button>
+            </div>
+
+            <div id="dashSignInPrompt" style="display:none;border:1px solid #333;padding:12px;margin-bottom:12px;text-align:center;">
+                <div style="font-size:0.7rem;opacity:0.5;letter-spacing:1px;margin-bottom:8px;">NOT SYNCING — DATA IS LOCAL ONLY</div>
+                <button onclick="signInWithGoogle()" style="width:100%;background:var(--neon);color:#000;font-weight:900;letter-spacing:2px;">⊕ SIGN IN TO SYNC</button>
+            </div>
+
+            <div class="buddy-container">
+                <div style="width:100%;display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;">
+                    <span>BUDDIES</span>
+                    <div id="buddyCountDisplay" style="font-size:1.5rem;">0</div>
+                </div>
+                <div id="buddyGallery" style="display:flex;flex-wrap:wrap;gap:10px;"></div>
+            </div>
+            <button class="install-btn hidden" onclick="installApp()" style="margin-top:20px;">+ ADD TO HOME SCREEN</button>
+            <div style="display:flex;gap:10px;margin-top:10px;">
+                <button onclick="showProjectSettings()" style="background:#333;flex:1;font-size:0.6rem;">EDIT PROJECT</button>
+                <button onclick="showProjectSwitcher()" style="background:#333;flex:1;font-size:0.6rem;">PROJECTS <span id="projectCountLabel" style="opacity:0.5;"></span></button>
+            </div>
+        </div>
+
+    </div>
+
+    <div id="iosInstallOverlay" class="overlay" onclick="closeIOSInstall()">
+        <div class="congrats-box">
+            <h2 style="color: var(--neon);">INSTALL APP</h2>
+            <p style="margin: 20px 0; line-height: 1.8;">
+                <strong>iPhone:</strong> Tap the Share button&nbsp;<span style="font-size: 1.3rem;">⎋</span><br>
+                then <strong>"Add to Home Screen"</strong>
+            </p>
+            <p style="margin: 20px 0; line-height: 1.8;">
+                <strong>Android:</strong> Tap the browser menu&nbsp;<span style="font-size: 1.3rem;">⋮</span><br>
+                then <strong>"Add to Home Screen"</strong>
+            </p>
+            <div style="font-size: 0.7rem; opacity: 0.6;">TAP ANYWHERE TO CLOSE</div>
+        </div>
+    </div>
+
+    <div id="levelUpOverlay" class="overlay" onclick="closeLevelUp()">
+        <div class="congrats-circle">
+            <h2 style="color:var(--neon);margin:0 0 8px;letter-spacing:3px;">LEVEL UP!</h2>
+            <div class="shield-wrap" style="width:130px;height:130px;margin:8px auto;">
+                <img id="levelUpShield" src="shields/1.png" class="shield-img shield-pop">
+                <div id="levelUpNumber" class="shield-num" style="font-size:3rem;">1</div>
+            </div>
+            <div id="levelUpRank" style="font-size:0.95rem;font-weight:900;letter-spacing:2px;color:var(--neon);margin:6px 0 2px;"></div>
+            <div style="font-size:0.65rem;color:var(--text-dim);margin-top:12px;letter-spacing:1px;">TAP TO CONTINUE</div>
+        </div>
+    </div>
+
+    <div id="levelOverlay" class="overlay" onclick="closeOverlay()">
+        <div class="congrats-circle">
+            <h2 style="color:var(--neon);margin:0 0 6px;font-size:1rem;letter-spacing:2px;">BOSS BEAT DEFEATED!</h2>
+            <img id="defeatedBossSprite" src="" style="width:110px;height:110px;image-rendering:pixelated;object-fit:contain;display:block;margin:8px auto;filter:drop-shadow(0 0 10px var(--neon));">
+            <div id="bossBeatTitle" style="font-size:1.3rem;font-weight:900;color:#fff;margin:8px 0 4px;"></div>
+            <div style="font-size:0.65rem;opacity:0.5;letter-spacing:1px;">CLICK TO CONTINUE</div>
+        </div>
+    </div>
+
+    <div id="grenadeOverlay" class="overlay" onclick="closeGrenade()">
+        <div class="congrats-circle">
+            <h2 style="color:#ff4500;margin:0 0 10px;">NARRATIVE GRENADE</h2>
+            <p id="inspireText" style="font-size:1rem;margin:0;line-height:1.6;"></p>
+        </div>
+    </div>
+
+    <div id="projectSettingsOverlay" class="overlay">
+        <div class="congrats-box" style="max-width:360px;width:90%;">
+            <h2 style="color:var(--neon);margin-bottom:20px;">EDIT PROJECT</h2>
+            <div class="input-group">
+                <input type="text" id="editTitle" placeholder="PROJECT TITLE">
+                <select id="editGenre">
+                    <option value="urbanFantasy">URBAN FANTASY</option>
+                    <option value="sciFi">SCI-FI</option>
+                    <option value="fantasy">HIGH FANTASY</option>
+                    <option value="horror">HORROR</option>
+                    <option value="cyberpunk">CYBERPUNK</option>
+                    <option value="crimeNoir">CRIME / NOIR</option>
+                    <option value="romance">ROMANCE</option>
+                    <option value="thriller">THRILLER</option>
+                    <option value="western">WESTERN</option>
+                </select>
+                <input type="number" id="editGoal" placeholder="WORD GOAL">
+                <input type="date" id="editDeadline">
+                <div style="display:flex;gap:10px;">
+                    <button onclick="saveProjectSettings()" style="flex:1;">SAVE</button>
+                    <button onclick="closeProjectSettings()" style="flex:1;background:#333;">CANCEL</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="projectSwitcherOverlay" class="overlay" style="display:none;">
+        <div class="congrats-box" style="max-width:420px;width:90%;max-height:80vh;overflow-y:auto;">
+            <h2 style="color:var(--neon);margin-bottom:20px;">PROJECTS</h2>
+            <div id="projectList"></div>
+            <button onclick="showNewProjectForm()" style="width:100%;margin-top:12px;">+ NEW PROJECT</button>
+            <button onclick="closeProjectSwitcher()" style="width:100%;margin-top:8px;background:#333;">CLOSE</button>
+        </div>
+    </div>
+
+    <div id="bossZoomOverlay" class="overlay" onclick="closeBossZoom()">
+        <div class="congrats-circle">
+            <div style="font-size:0.6rem;letter-spacing:3px;color:var(--text-dim);margin-bottom:6px;">BOSS INTEL</div>
+            <img id="bossZoomSprite" src="" style="width:130px;height:130px;image-rendering:pixelated;object-fit:contain;filter:drop-shadow(0 0 12px var(--neon));display:block;margin:0 auto;">
+            <div id="bossZoomName" style="font-size:1rem;font-weight:900;color:var(--neon);margin:8px 0 4px;letter-spacing:2px;"></div>
+            <div id="bossZoomBeat" style="font-size:0.75rem;letter-spacing:1px;color:var(--neon);opacity:0.7;margin-bottom:6px;"></div>
+            <div id="bossZoomLore" style="font-size:0.75rem;line-height:1.5;opacity:0.85;"></div>
+            <div style="font-size:0.6rem;opacity:0.4;margin-top:10px;letter-spacing:1px;">CLICK TO CLOSE</div>
+        </div>
+    </div>
+
+    <div id="buddyZoomOverlay" class="overlay" onclick="closeBuddyZoom()">
+        <div class="congrats-circle">
+            <img id="buddyZoomSprite" src="" style="width:140px;height:140px;image-rendering:pixelated;object-fit:contain;filter:drop-shadow(0 0 20px var(--neon));display:block;margin:0 auto;">
+            <div id="buddyZoomName" style="font-size:1.2rem;font-weight:900;color:var(--neon);margin:10px 0 6px;letter-spacing:2px;"></div>
+            <div id="buddyZoomFact" style="font-size:0.75rem;line-height:1.5;opacity:0.85;"></div>
+            <div style="font-size:0.6rem;opacity:0.4;margin-top:10px;letter-spacing:1px;">CLICK TO CLOSE</div>
+        </div>
+    </div>
+
+    <div id="correctOverlay" class="overlay" style="display:none;">
+        <div class="congrats-box" style="max-width:340px;width:90%;">
+            <h2 style="color:var(--neon);margin-bottom:16px;">CORRECT WORD COUNT</h2>
+            <p style="font-size:0.75rem;opacity:0.6;margin-bottom:16px;letter-spacing:1px;">Set your actual total word count. Period stats (weekly/monthly/yearly) will be adjusted by the difference.</p>
+            <input type="number" id="correctInput" placeholder="TOTAL WORDS" style="width:100%;box-sizing:border-box;margin-bottom:12px;">
+            <div style="display:flex;gap:10px;">
+                <button onclick="applyCorrection()" style="flex:1;">APPLY</button>
+                <button onclick="closeCorrectOverlay()" style="flex:1;background:#333;">CANCEL</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="buddyOverlay" class="overlay" onclick="closeBuddyOverlay()">
+        <div class="congrats-circle">
+            <h2 style="color:var(--neon);margin:0 0 8px;letter-spacing:2px;">NEW BUDDY!</h2>
+            <img id="newBuddySprite" src="" style="width:130px;height:130px;display:block;margin:8px auto;image-rendering:pixelated;filter:drop-shadow(0 0 15px var(--neon));">
+            <div style="font-size:0.7rem;color:var(--text-dim);margin-top:10px;letter-spacing:1px;">TAP TO CONTINUE</div>
+        </div>
+    </div>
+
+    <div id="toastContainer"></div>
+
+    <script src="theme.js"></script>
+    <script src="sounds.js"></script>
+    <script src="sidebar.js"></script>
+    <script src="data.js"></script>
+    <script src="buddy-data.js"></script>
+    <script src="tracker.js"></script>
+    <script src="backup.js"></script>
+    <script src="script.js"></script>
+    <script type="module" src="sync.js"></script>
+    <script>
+        if ('serviceWorker' in navigator) {
+            navigator.serviceWorker.register('./sw.js');
+        }
+    </script>
+</body>
+</html>

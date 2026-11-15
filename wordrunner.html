@@ -1,0 +1,183 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <script src="_sandbox/sandbox-seed.js"></script>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>WORDRUNNER</title>
+    <link rel="icon" href="DRAFTPUNK.png" type="image/png">
+    <link rel="stylesheet" href="style.css">
+    <script src="sentry.js"></script>
+    <link rel="manifest" href="manifest.json">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="Draft Punk">
+</head>
+<body>
+
+    <nav class="app-nav">
+        <div class="nav-dropdown">
+            <button class="nav-dropdown-btn active" onclick="toggleDraftMenu()">DRAFT PUNK</button>
+            <div class="nav-dropdown-menu" id="draftMenu">
+                <a href="index.html?dashboard" class="nav-dropdown-item">DRAFT PUNK</a>
+                <a href="wordrunner.html" class="nav-dropdown-item" style="color:var(--neon);">WORDRUNNER</a>
+                <a href="groups.html" class="nav-dropdown-item">WRITING GROUPS</a>
+                <a href="messages.html" class="nav-dropdown-item">MESSAGES</a>
+            </div>
+        </div>
+        <a href="write.html" class="nav-center-btn">WRITE</a>
+        <div class="nav-dropdown" style="margin-left:auto;">
+            <button class="nav-dropdown-btn" onclick="toggleNotesMenu()">WRITE</button>
+            <div class="nav-dropdown-menu" id="notesMenu">
+                <a href="notes.html" class="nav-dropdown-item">NOTES</a>
+                <a href="beat-notes.html" class="nav-dropdown-item">BEATS</a>
+                <a href="characters.html" class="nav-dropdown-item">CHARACTERS</a>
+            </div>
+        </div>
+        <div class="nav-dropdown">
+            <button class="nav-dropdown-btn" onclick="toggleDataMenu()">··· <span id="syncDot" style="display:inline-block;width:7px;height:7px;border-radius:50%;margin-left:2px;vertical-align:middle;transition:background 0.4s;"></span></button>
+            <div class="nav-dropdown-menu" id="dataMenu">
+                <button class="nav-dropdown-item" id="themeToggle" onclick="toggleTheme()">LIGHT MODE</button>
+                <div style="border-top:1px solid var(--border);margin:2px 0;"></div>
+                <button class="nav-dropdown-item" onclick="exportData(); toggleDataMenu()">⬇ BACKUP</button>
+                <button class="nav-dropdown-item" onclick="triggerImport(); toggleDataMenu()">⬆ RESTORE</button>
+                <div style="border-top:1px solid var(--border);margin:2px 0;"></div>
+                <button id="navSignIn" class="nav-dropdown-item" onclick="signInWithGoogle(); toggleDataMenu()" style="color:var(--neon);">⊕ SIGN IN WITH GOOGLE</button>
+                <div id="navUserInfo" style="display:none;">
+                    <div class="nav-dropdown-item" style="display:flex;align-items:center;gap:8px;cursor:default;">
+                        <img id="navAvatar" src="" style="width:20px;height:20px;border-radius:50%;border:1px solid var(--neon);">
+                        <span id="navUserName" style="color:var(--neon);font-size:0.7rem;"></span>
+                    </div>
+                    <button class="nav-dropdown-item" onclick="signOutUser(); toggleDataMenu()">⊖ SIGN OUT</button>
+                </div>
+                <div style="border-top:1px solid var(--border);margin:2px 0;"></div>
+                <a href="privacy.html" class="nav-dropdown-item">PRIVACY POLICY</a>
+                <a href="terms.html" class="nav-dropdown-item">TERMS OF SERVICE</a>
+            </div>
+        </div>
+    </nav>
+    <input type="file" id="importFileInput" accept=".json" onchange="importData(event)" style="display:none;">
+
+    <div class="main-layout">
+        <div class="app">
+            <h1>WORDRUNNER</h1>
+
+            <!-- Rescue zone -->
+            <div class="boss-zone">
+                <img id="wrBuddySprite" class="boss-sprite" src="buddies/buddy1.png">
+                <div style="flex:1;">
+                    <div id="wrMissionName">SELECT A MISSION</div>
+                    <div class="bar-container" style="height:10px;margin-bottom:0;border-color:#333;">
+                        <div id="wrCaptivityBar" class="bar-fill" style="background:red;width:100%;transition:width 0.3s;"></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Challenge setup -->
+            <div id="challengeSetup">
+
+                <!-- Tier grid -->
+                <div id="tierGridWrapper">
+                    <span style="font-size:0.75rem;letter-spacing:1px;opacity:0.6;">SELECT MISSION TIER</span>
+                    <div class="tier-grid" id="tierGrid"></div>
+                </div>
+
+                <!-- Selected tier info -->
+                <div id="tierInfo" class="challenge-box hidden">
+                    <div class="challenge-stats">
+                        <span><span id="challengeDuration">--</span> MIN</span>
+                        <span style="opacity:0.4;">/</span>
+                        <span><span id="challengeTarget">--</span> WORDS</span>
+                    </div>
+                    <div id="tierBuddyStatus" style="font-size:0.7rem;opacity:0.6;margin-top:6px;"></div>
+                </div>
+
+                <div class="toggle-row">
+                    <label for="customToggle">CUSTOM SPRINT (NO RESCUE)</label>
+                    <input type="checkbox" id="customToggle" onchange="toggleCustom()">
+                </div>
+
+                <div id="customSprintConfig" class="hidden">
+                    <select id="durationSelect" style="width:100%;margin-bottom:10px;">
+                        <option value="5">5 MINUTES</option>
+                        <option value="10">10 MINUTES</option>
+                        <option value="15">15 MINUTES</option>
+                        <option value="20">20 MINUTES</option>
+                        <option value="30">30 MINUTES</option>
+                        <option value="45">45 MINUTES</option>
+                        <option value="60">60 MINUTES</option>
+                    </select>
+                    <input type="number" id="customTarget" placeholder="WORD TARGET" style="width:100%;margin-bottom:10px;">
+                </div>
+
+<button id="startBtn" onclick="startSprint()" style="width:100%;margin-top:10px;" disabled>SELECT A MISSION TO START</button>
+            </div>
+
+            <!-- Sprint controls -->
+            <div id="sprintControls" class="hidden">
+                <div id="timerDisplay" class="timer-display">05:00</div>
+
+                <div style="text-align:center;margin-bottom:10px;">
+                    <span id="sprintWordCount" style="font-size:2rem;font-weight:900;color:var(--neon);">0</span>
+                    <span style="opacity:0.5;"> / </span>
+                    <span id="sprintTargetDisplay">0</span>
+                    <span style="opacity:0.5;font-size:0.8rem;"> WORDS</span>
+                </div>
+
+                <div class="bar-container" style="margin-bottom:15px;">
+                    <div id="sprintBar" class="bar-fill"></div>
+                </div>
+            </div>
+
+            <!-- Textarea (persists after sprint) -->
+            <div id="textareaSection" class="hidden">
+                <textarea id="sprintText" class="sprint-textarea" placeholder="Write or paste your words here..." oninput="onSprintInput()"></textarea>
+                <div style="display:flex;gap:10px;margin-top:10px;">
+                    <button id="abandonBtn" onclick="stopSprint()" style="background:#333;flex:1;">ABANDON SPRINT</button>
+                    <button id="copyBtn" class="hidden" onclick="copySprintText()" style="flex:1;">COPY TEXT</button>
+                </div>
+            </div>
+
+        </div>
+
+    </div>
+
+    <!-- Rescued overlay -->
+    <div id="wrWinOverlay" class="overlay">
+        <div class="congrats-circle">
+            <h2 id="wrWinTitle" style="color:var(--neon);margin:0 0 6px;letter-spacing:2px;">BUDDY RESCUED!</h2>
+            <img id="wrRescuedSprite" src="" style="width:110px;height:110px;image-rendering:pixelated;object-fit:contain;display:block;margin:8px auto;filter:drop-shadow(0 0 10px var(--neon));">
+            <div id="wrWinMessage" style="font-size:0.85rem;margin:8px 0;white-space:pre-line;line-height:1.5;"></div>
+            <div style="display:flex;gap:10px;margin-top:12px;">
+                <button id="wrAddToWriteBtn" onclick="addSprintToWrite()" style="flex:1;">+ ADD TO WRITE</button>
+                <button onclick="closeWinOverlay()" style="flex:1;background:#333;">CLOSE</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Failed overlay -->
+    <div id="wrFailOverlay" class="overlay" onclick="closeFailOverlay()">
+        <div class="congrats-circle">
+            <h2 style="color:#ff4500;margin:0 0 10px;letter-spacing:2px;">RESCUE FAILED</h2>
+            <p style="margin:6px 0;">You wrote <strong id="wrFailWords">0</strong> of <strong id="wrFailTarget">0</strong> words.</p>
+            <p style="font-size:0.85rem;opacity:0.7;margin:6px 0;">Your buddy is still out there.</p>
+            <div style="font-size:0.65rem;opacity:0.5;margin-top:12px;letter-spacing:1px;">CLICK TO CONTINUE</div>
+        </div>
+    </div>
+
+    <script src="theme.js"></script>
+    <script src="sounds.js"></script>
+    <script src="sidebar.js"></script>
+    <script src="backup.js"></script>
+    <script src="wordrunner-data.js"></script>
+    <script src="evidence.js"></script>
+    <script src="wordrunner.js"></script>
+    <script type="module" src="sync.js"></script>
+    <script>
+        if ('serviceWorker' in navigator) {
+            navigator.serviceWorker.register('./sw.js');
+        }
+    </script>
+</body>
+</html>

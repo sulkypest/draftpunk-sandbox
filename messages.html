@@ -1,0 +1,142 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <script src="_sandbox/sandbox-seed.js"></script>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MESSAGES</title>
+    <link rel="icon" href="DRAFTPUNK.png" type="image/png">
+    <link rel="stylesheet" href="style.css">
+    <script src="sentry.js"></script>
+    <link rel="manifest" href="manifest.json">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="Draft Punk">
+</head>
+<body>
+
+    <nav class="app-nav">
+        <div class="nav-dropdown">
+            <button class="nav-dropdown-btn active" onclick="toggleDraftMenu()">DRAFT PUNK</button>
+            <div class="nav-dropdown-menu" id="draftMenu">
+                <a href="index.html?dashboard" class="nav-dropdown-item">DRAFT PUNK</a>
+                <a href="wordrunner.html" class="nav-dropdown-item">WORDRUNNER</a>
+                <a href="groups.html" class="nav-dropdown-item">WRITING GROUPS</a>
+                <a href="messages.html" class="nav-dropdown-item" style="color:var(--neon);">MESSAGES</a>
+            </div>
+        </div>
+        <a href="write.html" class="nav-center-btn">WRITE</a>
+        <div class="nav-dropdown" style="margin-left:auto;">
+            <button class="nav-dropdown-btn" onclick="toggleNotesMenu()">WRITE</button>
+            <div class="nav-dropdown-menu" id="notesMenu">
+                <a href="notes.html" class="nav-dropdown-item">NOTES</a>
+                <a href="beat-notes.html" class="nav-dropdown-item">BEATS</a>
+                <a href="characters.html" class="nav-dropdown-item">CHARACTERS</a>
+            </div>
+        </div>
+        <div class="nav-dropdown">
+            <button class="nav-dropdown-btn" onclick="toggleDataMenu()">··· <span id="syncDot" style="display:inline-block;width:7px;height:7px;border-radius:50%;margin-left:2px;vertical-align:middle;transition:background 0.4s;"></span></button>
+            <div class="nav-dropdown-menu" id="dataMenu">
+                <button class="nav-dropdown-item" id="themeToggle" onclick="toggleTheme()">LIGHT MODE</button>
+                <div style="border-top:1px solid var(--border);margin:2px 0;"></div>
+                <button class="nav-dropdown-item" onclick="exportData(); toggleDataMenu()">⬇ BACKUP</button>
+                <button class="nav-dropdown-item" onclick="triggerImport(); toggleDataMenu()">⬆ RESTORE</button>
+                <div style="border-top:1px solid var(--border);margin:2px 0;"></div>
+                <button id="navSignIn" class="nav-dropdown-item" onclick="signInWithGoogle(); toggleDataMenu()" style="color:var(--neon);">⊕ SIGN IN WITH GOOGLE</button>
+                <div id="navUserInfo" style="display:none;">
+                    <div class="nav-dropdown-item" style="display:flex;align-items:center;gap:8px;cursor:default;">
+                        <img id="navAvatar" src="" style="width:20px;height:20px;border-radius:50%;border:1px solid var(--neon);">
+                        <span id="navUserName" style="color:var(--neon);font-size:0.7rem;"></span>
+                    </div>
+                    <button class="nav-dropdown-item" onclick="signOutUser(); toggleDataMenu()">⊖ SIGN OUT</button>
+                </div>
+                <div style="border-top:1px solid var(--border);margin:2px 0;"></div>
+                <a href="privacy.html" class="nav-dropdown-item">PRIVACY POLICY</a>
+                <a href="terms.html" class="nav-dropdown-item">TERMS OF SERVICE</a>
+            </div>
+        </div>
+    </nav>
+    <input type="file" id="importFileInput" accept=".json" onchange="importData(event)" style="display:none;">
+
+    <div class="notes-page">
+        <div class="app">
+            <h1>MESSAGES</h1>
+
+            <!-- Sign-in gate -->
+            <div id="messagesGate" style="text-align:center;padding:40px 0;">
+                <p style="font-size:0.8rem;opacity:0.5;letter-spacing:1px;margin-bottom:20px;">SIGN IN TO USE MESSAGES</p>
+                <button onclick="signInWithGoogle()" style="width:100%;max-width:300px;">⊕ SIGN IN WITH GOOGLE</button>
+            </div>
+
+            <!-- Main content -->
+            <div id="messagesContent" style="display:none;">
+
+                <!-- Conversation list -->
+                <div id="convListView">
+                    <div class="msg-bar">
+                        <span class="msg-bar-title">CONVERSATIONS</span>
+                        <span class="msg-bar-btns">
+                            <button id="newMsgBtn" class="msg-new-btn" onclick="showNewMessage()">＋ NEW MESSAGE</button>
+                            <button id="newGroupBtn" class="msg-new-btn" onclick="showNewGroup()">＋ NEW GROUP</button>
+                        </span>
+                    </div>
+                    <div id="newMsgPicker" class="msg-picker" style="display:none;">
+                        <label for="composeToSelect" class="msg-label">MESSAGE A FRIEND</label>
+                        <div class="msg-picker-row">
+                            <select id="composeToSelect"></select>
+                            <button onclick="startConversation()">OPEN</button>
+                        </div>
+                    </div>
+                    <div id="newGroupPanel" class="msg-picker" style="display:none;">
+                        <label for="newGroupName" class="msg-label">GROUP NAME</label>
+                        <input type="text" id="newGroupName" maxlength="60" placeholder="e.g. Thursday writers">
+                        <div class="msg-label msg-gap">ADD FRIENDS</div>
+                        <div id="newGroupPicker"></div>
+                        <div class="msg-picker-row msg-gap">
+                            <span id="newGroupMsg" class="msg-status"></span>
+                            <button onclick="createNewGroup()">CREATE GROUP</button>
+                        </div>
+                    </div>
+                    <div id="convList" class="msg-conv-list"><div class="lb-loading">LOADING...</div></div>
+                </div>
+
+                <!-- One conversation -->
+                <div id="threadView" style="display:none;">
+                    <div class="msg-bar">
+                        <button class="msg-back" onclick="closeThread()">← ALL CONVERSATIONS</button>
+                    </div>
+                    <div class="msg-thread-name" id="threadName"></div>
+                    <div class="msg-thread-sub" id="threadSub"></div>
+                    <div id="groupPanel" class="msg-picker" style="display:none;"></div>
+                    <div id="threadMessages" class="msg-thread" aria-live="polite"></div>
+                    <div id="replyBox" class="msg-reply">
+                        <textarea id="composeBody" maxlength="500" placeholder="Write a reply…"
+                            oninput="updateCharCount(this)" onkeydown="replyKey(event)" rows="3"></textarea>
+                        <div class="msg-reply-foot">
+                            <span id="composeMsg" class="msg-status"></span>
+                            <span id="composeCharCount" class="msg-count">0 / 500</span>
+                            <button id="sendBtn" onclick="doSendMessage()">⤴ SEND</button>
+                        </div>
+                        <p class="msg-hint">Ctrl/Cmd + Enter to send</p>
+                    </div>
+                    <p id="replyBlocked" class="msg-hint" style="display:none;">You're no longer friends, so you can't reply in this conversation.</p>
+                </div>
+
+            </div>
+        </div>
+    </div>
+
+    <script src="theme.js"></script>
+    <script src="sidebar.js"></script>
+    <script src="backup.js"></script>
+    <script src="friend-picker.js"></script>
+    <script src="messages.js"></script>
+    <script type="module" src="sync.js"></script>
+    <script>
+        if ('serviceWorker' in navigator) {
+            navigator.serviceWorker.register('./sw.js');
+        }
+    </script>
+</body>
+</html>

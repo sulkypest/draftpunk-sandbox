@@ -1,0 +1,131 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <script src="_sandbox/sandbox-seed.js"></script>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>WRITE</title>
+    <link rel="icon" href="DRAFTPUNK.png" type="image/png">
+    <link rel="stylesheet" href="style.css">
+    <script src="sentry.js"></script>
+    <link rel="manifest" href="manifest.json">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="Draft Punk">
+</head>
+<body>
+
+    <nav class="app-nav">
+        <div class="nav-dropdown">
+            <button class="nav-dropdown-btn active" onclick="toggleDraftMenu()">DRAFT PUNK</button>
+            <div class="nav-dropdown-menu" id="draftMenu">
+                <a href="index.html?dashboard" class="nav-dropdown-item">DRAFT PUNK</a>
+                <a href="wordrunner.html" class="nav-dropdown-item">WORDRUNNER</a>
+                <a href="groups.html" class="nav-dropdown-item">WRITING GROUPS</a>
+                <a href="messages.html" class="nav-dropdown-item">MESSAGES</a>
+            </div>
+        </div>
+        <a href="write.html" class="nav-center-btn active">WRITE</a>
+        <div class="nav-dropdown" style="margin-left:auto;">
+            <button class="nav-dropdown-btn" onclick="toggleNotesMenu()">WRITE</button>
+            <div class="nav-dropdown-menu" id="notesMenu">
+                <a href="notes.html" class="nav-dropdown-item">NOTES</a>
+                <a href="beat-notes.html" class="nav-dropdown-item">BEATS</a>
+                <a href="characters.html" class="nav-dropdown-item">CHARACTERS</a>
+            </div>
+        </div>
+        <div class="nav-dropdown">
+            <button class="nav-dropdown-btn" onclick="toggleDataMenu()">··· <span id="syncDot" style="display:inline-block;width:7px;height:7px;border-radius:50%;margin-left:2px;vertical-align:middle;transition:background 0.4s;"></span></button>
+            <div class="nav-dropdown-menu" id="dataMenu">
+                <button class="nav-dropdown-item" id="themeToggle" onclick="toggleTheme()">LIGHT MODE</button>
+                <div style="border-top:1px solid var(--border);margin:2px 0;"></div>
+                <button class="nav-dropdown-item" onclick="exportData(); toggleDataMenu()">⬇ BACKUP</button>
+                <button class="nav-dropdown-item" onclick="triggerImport(); toggleDataMenu()">⬆ RESTORE</button>
+                <div style="border-top:1px solid var(--border);margin:2px 0;"></div>
+                <button id="navSignIn" class="nav-dropdown-item" onclick="signInWithGoogle(); toggleDataMenu()" style="color:var(--neon);">⊕ SIGN IN WITH GOOGLE</button>
+                <div id="navUserInfo" style="display:none;">
+                    <div class="nav-dropdown-item" style="display:flex;align-items:center;gap:8px;cursor:default;">
+                        <img id="navAvatar" src="" style="width:20px;height:20px;border-radius:50%;border:1px solid var(--neon);">
+                        <span id="navUserName" style="color:var(--neon);font-size:0.7rem;"></span>
+                    </div>
+                    <button class="nav-dropdown-item" onclick="signOutUser(); toggleDataMenu()">⊖ SIGN OUT</button>
+                </div>
+                <div style="border-top:1px solid var(--border);margin:2px 0;"></div>
+                <a href="privacy.html" class="nav-dropdown-item">PRIVACY POLICY</a>
+                <a href="terms.html" class="nav-dropdown-item">TERMS OF SERVICE</a>
+            </div>
+        </div>
+    </nav>
+    <input type="file" id="importFileInput" accept=".json" onchange="importData(event)" style="display:none;">
+
+    <div class="write-focus-bar">
+        <span id="focusChapterTitle" style="font-size:0.7rem;letter-spacing:1px;opacity:0.4;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;"></span>
+        <span id="focusWc" style="font-size:0.7rem;letter-spacing:1px;opacity:0.5;white-space:nowrap;"></span>
+        <button onclick="exitFocus()" style="background:var(--neon);border:none;color:var(--bg);font-family:inherit;font-size:0.7rem;font-weight:900;letter-spacing:1px;padding:4px 12px;min-height:unset;width:auto;cursor:pointer;">✕ EXIT FOCUS</button>
+    </div>
+
+    <div class="notes-page">
+        <div class="app">
+            <h1 id="writeProjectTitle">WRITE</h1>
+
+            <div id="writeChapterList"></div>
+
+            <button onclick="addChapter()" style="width:100%;margin-top:10px;">+ ADD CHAPTER</button>
+
+            <div class="write-footer">
+                <div style="display:flex;justify-content:space-between;align-items:center;gap:10px;">
+                    <span id="writeTotalWords" style="font-size:0.75rem;opacity:0.6;letter-spacing:1px;flex:1;">TOTAL: 0 WORDS</span>
+                    <span id="writeSaveStatus" style="font-size:0.65rem;letter-spacing:1px;color:var(--neon);min-width:60px;text-align:right;"></span>
+                    <button onclick="saveAllNow()" style="background:#222;font-size:0.65rem;padding:4px 10px;min-height:unset;width:auto;letter-spacing:1px;">⬆ SAVE</button>
+                </div>
+<button id="syncWordsBtn" onclick="syncToTracker()" style="width:100%;margin-top:10px;" disabled>ALL WORDS SYNCED</button>
+                <a href="record.html" class="write-record-link">✎ WRITING RECORD</a>
+                <button onclick="exportStory()" style="width:100%;margin-top:8px;background:#333;">⬇ EXPORT STORY</button>
+                <button onclick="triggerImportStory()" style="width:100%;margin-top:8px;background:#333;">⬆ IMPORT STORY</button>
+                <input type="file" id="importStoryFile" accept=".rtf,.txt,.html,.htm" style="display:none" onchange="importStory(event)">
+            </div>
+        </div>
+    </div>
+
+    <div id="shareOverlay" class="overlay" style="display:none;" onclick="if(event.target===this)closeShareOverlay()">
+        <div class="congrats-box" style="max-width:360px;width:90%;">
+            <h2 style="color:var(--neon);margin-bottom:8px;">SHARE CHAPTER</h2>
+            <div id="shareChapterName" style="font-size:0.75rem;opacity:0.5;letter-spacing:1px;margin-bottom:16px;"></div>
+
+            <div id="activeSharesSection" style="display:none;margin-bottom:16px;">
+                <span style="font-size:0.75rem;opacity:0.5;letter-spacing:1px;">CURRENTLY SHARED WITH</span>
+                <div id="activeSharesList" style="margin-top:8px;"></div>
+                <div style="border-top:1px solid var(--border);margin:14px 0;"></div>
+            </div>
+
+            <label for="shareFriendSelect" style="font-size:0.75rem;opacity:0.5;letter-spacing:1px;">SHARE WITH FRIEND</label>
+            <select id="shareFriendSelect" onchange="shareChoice('friend')" style="width:100%;margin-top:8px;margin-bottom:12px;"></select>
+            <label for="shareGroupSelect" style="font-size:0.75rem;opacity:0.5;letter-spacing:1px;">OR SHARE WITH A GROUP</label>
+            <select id="shareGroupSelect" onchange="shareChoice('group')" style="width:100%;margin-top:8px;margin-bottom:16px;"></select>
+            <p id="shareMsg" style="font-size:0.75rem;height:1.2em;margin-bottom:12px;letter-spacing:1px;"></p>
+            <div style="display:flex;gap:10px;">
+                <button onclick="confirmShare()" style="flex:1;">⤴ SHARE</button>
+                <button onclick="closeShareOverlay()" style="flex:1;background:#333;">CANCEL</button>
+            </div>
+            <p style="font-size:0.62rem;opacity:0.3;margin-top:14px;line-height:1.5;letter-spacing:1px;">SHARED CHAPTERS ARE READ-ONLY FOR THE RECIPIENT.</p>
+        </div>
+    </div>
+
+    <script src="theme.js"></script>
+    <script src="sidebar.js"></script>
+    <script src="data.js"></script>
+    <script src="tracker.js"></script>
+    <script src="evidence.js"></script>
+    <script src="backup.js"></script>
+    <script src="write.js"></script>
+    <script src="export.js"></script>
+    <script src="versions.js"></script>
+    <script type="module" src="sync.js"></script>
+    <script>
+        if ('serviceWorker' in navigator) {
+            navigator.serviceWorker.register('./sw.js');
+        }
+    </script>
+</body>
+</html>
