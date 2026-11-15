@@ -1,4 +1,4 @@
-const CACHE = 'draftpunk-sandbox-v111';
+const CACHE = 'draftpunk-sandbox-v112';
 
 const PRECACHE = [
     './',
@@ -53,6 +53,7 @@ const PRECACHE = [
     './record.js',
     './export.js',
     './versions.js',
+    './nav-height.js',
     './friend-picker.js',
 ];
 
