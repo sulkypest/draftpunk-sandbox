@@ -143,8 +143,6 @@ window.promptMoveChapter = function(id) {
     renderAll();
 };
 
-window.syncChapter = function(id) { syncChaptersToTracker([id]); };
-
 // ── Counted-words ledger ──────────────────────────────────────────────────────
 // Each chapter's syncedWords is how many of its words are already on the
 // tracker. Both SYNC routes (per chapter, and the footer button for all
@@ -207,6 +205,11 @@ function syncChaptersToTracker(ids) {
     const proj = dpData.projects[dpData.activeProjectId];
     if (!proj) { alert('No active project found.'); return; }
 
+    // Writer streak + freezes (all projects together). Recorded before the
+    // project itself is updated, so a first-time carry-over of an existing
+    // streak isn't counted twice.
+    const sev = window.DPStreak ? window.DPStreak.recordWords(delta, JSON.parse(JSON.stringify(dpData.projects))) : null;
+
     const ev = window.DPTracker.awardWords(proj, delta);
 
     chapters.forEach(ch => { ch.syncedWords = ch.wordCount || 0; });
@@ -220,16 +223,31 @@ function syncChaptersToTracker(ids) {
     updateFooter();
     renderAll();
     if (window.updateSidebar) window.updateSidebar();
+    if (window.dpStreakRefresh) window.dpStreakRefresh();
 
     // Show what happened, one toast at a time
     queueToast(null, '✓ SYNCED', `${delta.toLocaleString()} WORDS ADDED`);
     if (ev.streak)  queueToast(null, `🔥 ${ev.streak.days}-DAY STREAK`, `+${ev.streak.bonus} BONUS XP`);
+    if (sev) streakToasts(sev).forEach(t => queueToast(null, t[0], t[1]));
     if (ev.session) queueToast(null, ev.session.label, `+${ev.session.bonus} BONUS XP`);
     if (ev.beat)    queueToast(window.getBossImgSrc ? window.getBossImgSrc(ev.beat.idx + 1) : null, 'BEAT DEFEATED', ev.beat.name.toUpperCase());
     ev.buddies.forEach(f => queueToast(`buddies/${f}`, 'NEW BUDDY!', 'CHECK YOUR COLLECTION'));
     if (ev.minion)  queueToast(null, `${ev.minion.emoji} FOE VANQUISHED`, ev.minion.name.toUpperCase());
     if (ev.levelUp) queueToast(`shields/${Math.min(5, Math.ceil(ev.levelUp.level / 5))}.png`, `LEVEL ${ev.levelUp.level}!`, ev.levelUp.rank.toUpperCase());
+    // Offer daily reminders (once; only where they can work)
+    if (window.dpOfferNotifications) window.dpOfferNotifications();
 }
+
+// Toasts for streak freezes used / earned (see streak.js)
+function streakToasts(sev) {
+    const out = [];
+    if (sev.frozeDays && sev.frozeDays.length) out.push(['\u2744\uFE0F STREAK SAVED', `${sev.frozeDays.length > 1 ? sev.frozeDays.length + ' FREEZES' : 'A FREEZE'} COVERED THE DAY${sev.frozeDays.length > 1 ? 'S' : ''} YOU MISSED`]);
+    (sev.earned || []).forEach(e => out.push(e.kept
+        ? ['\u2744\uFE0F STREAK FREEZE EARNED', e.reason === 'streak' ? `${e.days} DAYS IN A ROW` : 'OVER 1,500 WORDS TODAY']
+        : ['\u2744\uFE0F FREEZES FULL', 'YOU ALREADY HOLD THE MAXIMUM OF 3']));
+    return out;
+}
+window.dpStreakToasts = streakToasts;
 
 let _toastQueue = [], _toastBusy = false;
 function queueToast(sprite, title, sub) {
@@ -273,7 +291,6 @@ function renderAll() {
     if (!container) return;
 
     container.innerHTML = writingData.chapters.map(ch => {
-        const synced = unsyncedWords(ch) === 0;
         return `
             <div class="write-chapter" id="chap_${ch.id}">
                 <div class="write-chapter-header" onclick="toggleChapter('${ch.id}')">
@@ -326,8 +343,6 @@ function renderAll() {
                             </div>
                             <button class="write-tb-btn write-tb-history" onpointerdown="event.preventDefault()"
                                 onclick="openVersionHistory('${ch.id}')" title="Version history">⟲ HISTORY</button>
-                            <button class="write-tb-btn write-tb-sync${synced ? ' synced' : ''}" onpointerdown="event.preventDefault()"
-                                onclick="syncChapter('${ch.id}')" title="Sync this chapter to tracker">⊕ SYNC</button>
                         </div>
                     </div>
                     <div class="write-area"
@@ -694,22 +709,31 @@ function updateFooter() {
     const totalEl = document.getElementById('writeTotalWords');
     if (totalEl) totalEl.textContent = 'TOTAL: ' + total.toLocaleString() + ' WORDS';
 
+    // One button saves to the cloud and adds any new words to the tracker,
+    // so it stays available even when there are no new words to add.
     const btn = document.getElementById('syncWordsBtn');
     if (btn) {
-        if (delta > 0) {
-            btn.textContent   = 'SYNC ' + delta.toLocaleString() + ' NEW WORDS TO TRACKER';
-            btn.disabled      = false;
-            btn.style.opacity = '';
-        } else {
-            btn.textContent   = 'ALL WORDS SYNCED';
-            btn.disabled      = true;
-            btn.style.opacity = '0.4';
-        }
+        btn.textContent = 'SYNC AND SAVE';
+        btn.title       = delta > 0
+            ? delta.toLocaleString() + ' new words to add to your tracker'
+            : 'All words are on your tracker';
     }
 }
 
 // ── Sync to tracker ───────────────────────────────────────────────────────────
 window.syncToTracker = function() {
+    syncChaptersToTracker(writingData.chapters.map(c => c.id));
+};
+
+// Footer button: save every chapter now, then add any new words to the
+// tracker (the tracker step still asks first, as before).
+window.syncAndSave = function() {
+    saveAllNow();
+    const fresh = writingData.chapters.reduce((s, c) => s + unsyncedWords(c), 0);
+    if (fresh <= 0) {
+        showWriteToast(null, '✓ SAVED', 'ALL WORDS ARE ON YOUR TRACKER');
+        return;
+    }
     syncChaptersToTracker(writingData.chapters.map(c => c.id));
 };
 

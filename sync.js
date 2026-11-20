@@ -38,7 +38,71 @@ if (RECAPTCHA_KEY !== 'YOUR_RECAPTCHA_V3_SITE_KEY') {
     });
 }
 
-const DATA_KEYS = ['draftPunkData', 'beatNotesData', 'charactersData', 'wordRunnerData', 'notesData'];
+const DATA_KEYS = ['draftPunkData', 'beatNotesData', 'charactersData', 'wordRunnerData', 'notesData', 'dpStreak'];
+
+// ── Period boundaries for the public week/month/year counts ──────────────────
+// Each writer's counters reset at their own local midnight (Monday for the
+// week). A writer's stored counts are only cleared when they next open the
+// app, so a profile can still hold last week's total after the week is over.
+// To keep group and leaderboard comparisons fair, each push records when its
+// counts expire (in the writer's own local time), and readers show 0 once that
+// moment has passed.
+function _dpWeekKey() {
+    const d = new Date();
+    const day = d.getDay() || 7;
+    d.setDate(d.getDate() + 4 - day);
+    const yr = new Date(d.getFullYear(), 0, 1);
+    return d.getFullYear() + '-W' + Math.ceil(((d - yr) / 86400000 + 1) / 7);
+}
+function _dpMonthKey() { const d = new Date(); return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0'); }
+function _dpYearKey()  { return '' + new Date().getFullYear(); }
+function _dpWeekStart() {               // this Monday, 00:00 local
+    const d = new Date(); d.setHours(0, 0, 0, 0);
+    d.setDate(d.getDate() - ((d.getDay() || 7) - 1));
+    return d;
+}
+function _dpPeriodBounds() {
+    const now = new Date();
+    const weekStart  = _dpWeekStart();
+    const weekEnd    = new Date(weekStart); weekEnd.setDate(weekEnd.getDate() + 7);
+    const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
+    const monthEnd   = new Date(now.getFullYear(), now.getMonth() + 1, 1);
+    const yearStart  = new Date(now.getFullYear(), 0, 1);
+    const yearEnd    = new Date(now.getFullYear() + 1, 0, 1);
+    return {
+        wordsThisWeek:  { start: weekStart.getTime(),  end: weekEnd.getTime(),  endField: 'weekEndsAt'  },
+        wordsThisMonth: { start: monthStart.getTime(), end: monthEnd.getTime(), endField: 'monthEndsAt' },
+        wordsThisYear:  { start: yearStart.getTime(),  end: yearEnd.getTime(),  endField: 'yearEndsAt'  },
+    };
+}
+// The count to show for someone else's profile: 0 if it belongs to a period
+// that has already ended. Profiles saved before this change have no end
+// marker, so fall back to "last saved before this period began" (viewer's clock).
+function _dpCurrentCount(u, field) {
+    const b = _dpPeriodBounds()[field];
+    const val = u[field] || 0;
+    if (!b) return val;                                  // totalWords: never resets
+    const endsAt = u[b.endField];
+    if (typeof endsAt === 'number' && endsAt > 0) return Date.now() < endsAt ? val : 0;
+    return (u.updatedAt || 0) >= b.start ? val : 0;
+}
+
+// Notifications live in push.js, loaded on demand so that if it ever fails to
+// load, syncing carries on unaffected.
+let _pushModule = null;
+function loadPush() {
+    if (!_pushModule) _pushModule = import('./push.js').catch(err => { console.warn('Notifications unavailable:', err); return null; });
+    return _pushModule;
+}
+// Called by the Write page and dashboard after words are saved
+window.dpOfferNotifications = function() {
+    if (!currentUser) return;
+    loadPush().then(m => {
+        if (!m) return;
+        m.initPush(app, () => auth.currentUser);
+        m.maybeOfferNotifications().catch(() => {});
+    });
+};
 
 let currentUser = undefined; // undefined = auth not yet resolved; null = resolved, not signed in
 let syncTimeout = null;
@@ -64,9 +128,17 @@ async function pushToCloud(user) {
     const dpData   = payload.draftPunkData || {};
     const projects = Object.values(dpData.projects || {});
     payload.totalWords     = projects.reduce((s, p) => s + (p.total          || 0), 0);
-    payload.wordsThisWeek  = projects.reduce((s, p) => s + (p.wordsThisWeek  || 0), 0);
-    payload.wordsThisMonth = projects.reduce((s, p) => s + (p.wordsThisMonth || 0), 0);
-    payload.wordsThisYear  = projects.reduce((s, p) => s + (p.wordsThisYear  || 0), 0);
+    // Only count a project's period words if they belong to the current period
+    // (a project that hasn't been opened since the week rolled over still holds
+    // last week's figure locally until its own reset runs).
+    const wk = _dpWeekKey(), mo = _dpMonthKey(), yr = _dpYearKey();
+    payload.wordsThisWeek  = projects.reduce((s, p) => s + (p.lastWeekReset  === wk ? (p.wordsThisWeek  || 0) : 0), 0);
+    payload.wordsThisMonth = projects.reduce((s, p) => s + (p.lastMonthReset === mo ? (p.wordsThisMonth || 0) : 0), 0);
+    payload.wordsThisYear  = projects.reduce((s, p) => s + (p.lastYearReset  === yr ? (p.wordsThisYear  || 0) : 0), 0);
+    const bounds = _dpPeriodBounds();
+    payload.weekEndsAt     = bounds.wordsThisWeek.end;
+    payload.monthEndsAt    = bounds.wordsThisMonth.end;
+    payload.yearEndsAt     = bounds.wordsThisYear.end;
     payload.displayName    = user.displayName || '';
     payload.photoURL       = user.photoURL    || '';
     await setDoc(doc(db, 'users', user.uid), payload, { merge: true });
@@ -335,6 +407,7 @@ async function handleSignedIn(user) {
         localStorage.removeItem('dpLastUpdated');
     }
     localStorage.setItem('dpUserId', user.uid);
+    loadPush().then(m => { if (m) m.initPush(app, () => auth.currentUser); });
 
     let hasUsername = false;
     try {
@@ -354,9 +427,10 @@ async function handleSignedIn(user) {
 }
 
 async function continueAfterAuth(user) {
-    let needsReload = false;
+    let needsReload = false, synced = false;
     try {
         needsReload = await pullFromCloud(user);
+        synced = true;
     } catch (e) {
         console.warn('pullFromCloud failed, using local data:', e);
         setSyncStatus('error');
@@ -365,6 +439,9 @@ async function continueAfterAuth(user) {
     if (needsReload && !window.location.pathname.includes('write.html')) {
         location.reload();
     } else {
+        // One-off November 2026 monthly-count repair — only once this device
+        // is in step with the cloud, so it can't overwrite newer data.
+        if (synced) runNovemberRepair();
         const dpData    = JSON.parse(localStorage.getItem('draftPunkData') || '{}');
         const hasActive = dpData.activeProjectId &&
                           dpData.projects &&
@@ -380,6 +457,18 @@ async function continueAfterAuth(user) {
             console.warn('Non-critical post-auth check failed:', e);
         }
     }
+}
+
+function runNovemberRepair() {
+    const now = new Date();
+    if (now.getFullYear() !== 2026 || now.getMonth() !== 10) return;
+    import('./repair-nov2026.js').then(({ repairNovember2026 }) => {
+        let dp;
+        try { dp = JSON.parse(localStorage.getItem('draftPunkData') || 'null'); } catch (e) { return; }
+        if (!dp || !repairNovember2026(dp, new Date())) return;
+        localStorage.setItem('draftPunkData', JSON.stringify(dp));   // saves + syncs as normal
+        document.dispatchEvent(new CustomEvent('dpMonthlyRepaired'));
+    }).catch(err => console.warn('November repair skipped:', err));
 }
 
 // ── Auth state changes ────────────────────────────────────────────────────────
@@ -432,6 +521,8 @@ window.signOutUser = async function() {
         syncTimeout = null;
         try { await pushToCloud(currentUser); } catch (e) { console.warn('Pre-signout push failed', e); }
     }
+    // Stop this device getting the signed-out writer's notifications
+    try { const m = await loadPush(); if (m) await m.forgetThisDevice(); } catch (e) { /* not set up */ }
     await signOut(auth);
     // Clear all local data so the next user (or same user on next sign-in)
     // starts clean — prevents stale data flashing before auth resolves.
@@ -481,6 +572,8 @@ async function showAccountOverlay() {
 
             <button onclick="signOutUser()" style="width:100%;margin-bottom:6px;">⊖ SIGN OUT</button>
 
+            <div id="dpNotifySection"></div>
+
             <div style="border-top:1px solid var(--border,#2a2a2a);margin:20px 0 16px;"></div>
             <div style="font-size:0.6rem;opacity:0.4;letter-spacing:2px;margin-bottom:12px;">DANGER ZONE</div>
 
@@ -508,6 +601,11 @@ async function showAccountOverlay() {
     `;
 
     overlay.style.display = 'flex';
+    loadPush().then(m => {
+        if (!m) return;
+        m.initPush(app, () => auth.currentUser);
+        m.renderNotificationSettings(document.getElementById('dpNotifySection')).catch(() => {});
+    });
 
     window._dpResetCloudData = async function() {
         if (!confirm('Reset all cloud data? Your local data will be preserved but your cloud backup will be wiped.')) return;
@@ -622,16 +720,12 @@ window.getLeaderboard = async function(field = 'totalWords') {
         // aren't limited to users who happen to have high total words.
         const q    = query(collection(db, 'users'), orderBy(field, 'desc'), limit(50));
         const snap = await getDocs(q);
-        const now  = Date.now();
-        // Max age for period fields — data older than this is stale (counter not yet reset)
-        const maxAge = {
-            wordsThisWeek:  8  * 86400000,
-            wordsThisMonth: 32 * 86400000,
-            wordsThisYear:  370 * 86400000,
-        }[field] || Infinity;
+        // Counts from a period that has already ended show as 0 (and drop off),
+        // even if that writer hasn't opened the app since to reset them.
         return snap.docs
-            .map(d => ({ uid: d.id, ...d.data() }))
-            .filter(u => u.username && (u[field] || 0) > 0 && (now - (u.updatedAt || 0)) < maxAge)
+            .map(d => { const u = { uid: d.id, ...d.data() }; u[field] = _dpCurrentCount(u, field); return u; })
+            .filter(u => u.username && (u[field] || 0) > 0)
+            .sort((a, b) => (b[field] || 0) - (a[field] || 0))
             .slice(0, 25);
     } catch (err) {
         console.error('Leaderboard error:', err);
@@ -1078,8 +1172,10 @@ window.getGroupStats = async function(group) {
             const s = await getDoc(doc(db, 'users', uid));
             const d = s.exists() ? s.data() : {};
             return { uid, username: d.username || (group.memberNames || {})[uid] || '?',
-                     totalWords: d.totalWords || 0, wordsThisWeek: d.wordsThisWeek || 0,
-                     wordsThisMonth: d.wordsThisMonth || 0, wordsThisYear: d.wordsThisYear || 0,
+                     totalWords: d.totalWords || 0,
+                     wordsThisWeek:  _dpCurrentCount(d, 'wordsThisWeek'),
+                     wordsThisMonth: _dpCurrentCount(d, 'wordsThisMonth'),
+                     wordsThisYear:  _dpCurrentCount(d, 'wordsThisYear'),
                      updatedAt: d.updatedAt || 0 };
         } catch (e) { return { uid, username: (group.memberNames || {})[uid] || '?', totalWords: 0, wordsThisWeek: 0, wordsThisMonth: 0, wordsThisYear: 0 }; }
     }));
