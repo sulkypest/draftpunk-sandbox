@@ -8,6 +8,7 @@ export const onAuthStateChanged = (auth, cb) => { setTimeout(() => cb(window.__m
 // ── Email sign-in stand-ins (sandbox only) ──────────────────────────────────
 // Try: any email starting "google" behaves like an existing Google account;
 // password "wrong" fails; passwords under 6 characters are refused on create.
+// Email codes: see firebase-functions.js (the code is always 123456).
 const wait = ms => new Promise(r => setTimeout(r, ms));
 const fail = code => { const e = new Error(code); e.code = code; throw e; };
 const goIn = () => { setTimeout(() => { location.href = 'index.html?dashboard'; }, 200); return { user: window.__mockUser || {} }; };
@@ -26,6 +27,4 @@ export const createUserWithEmailAndPassword = async (auth, email, pw) => {
 };
 export const sendPasswordResetEmail = async (auth, email) => { await wait(300); checkEmail(email); };
 export const sendEmailVerification = async () => {};
-export const sendSignInLinkToEmail = async (auth, email) => { await wait(300); checkEmail(email); };
-export const isSignInWithEmailLink = (auth, href) => /[?&]mode=signIn/.test(href);
-export const signInWithEmailLink = async (auth, email) => { await wait(300); checkEmail(email); return { user: window.__mockUser || {} }; };
+export const signInWithCustomToken = async () => goIn();
