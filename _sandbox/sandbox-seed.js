@@ -203,6 +203,7 @@
             `<button type="button" data-t="editnote" style="${bs}">ANOTHER DEVICE EDITS NOTE 1</button>` +
             `<button type="button" data-t="profile" style="${bs}">CHECK MY PUBLIC PROFILE</button>` +
             `<button type="button" data-t="day" style="${bs}">PRETEND A DAY HAS PASSED</button>` +
+            `<button type="button" data-t="landing" style="${bs}">SHOW SIGNED-OUT PAGE</button>` +
             `<button type="button" data-t="reset" style="${bs}">RESET TEST DATA</button>` +
             '<div id="dpSbxOut" style="margin-top:5px;font-weight:400;letter-spacing:0;"></div></div>';
         const tools = b.querySelector('#dpSbxTools'), out = b.querySelector('#dpSbxOut');
@@ -210,6 +211,7 @@
         tools.addEventListener('click', async e => {
             const t = e.target.dataset && e.target.dataset.t; if (!t) return;
             if (t === 'reset') return window.dpSandboxReset();
+            if (t === 'landing') { location.href = 'index.html?dashboard#dpShowLanding'; if (/index\.html/.test(location.pathname)) location.reload(); return; }
             if (t === 'fail') { const label = window.dpSandboxTools.toggleFail(); e.target.textContent = label.includes('FAILING') ? 'CLOUD SAVES: FAILING (TAP TO FIX)' : 'CLOUD SAVES: WORKING (TAP TO BREAK)';
                 b.querySelector('#dpSbxLabel').textContent = 'SANDBOX' + (label.includes('FAILING') ? ' · CLOUD SAVES FAILING' : ''); out.textContent = label; return; }
             out.textContent = '…';
@@ -217,6 +219,10 @@
             out.textContent = await ({ other: T.otherDevice, note: T.otherDeviceNote, editnote: T.otherDeviceEditFirst, day: T.dayPassed, profile: T.profile }[t])();
         });
         document.body.appendChild(b);
+    }
+    // Sandbox: show the signed-out page (what new visitors see) on request
+    if (location.hash === '#dpShowLanding') {
+        setTimeout(() => { const a = document.getElementById('authScreen'); if (a) a.style.display = 'flex'; }, 2500);
     }
     if (document.body) badge(); else document.addEventListener('DOMContentLoaded', badge);
 })();
