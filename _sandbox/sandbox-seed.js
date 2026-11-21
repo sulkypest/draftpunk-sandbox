@@ -8,7 +8,7 @@
 (function () {
     const DB_KEY = 'dpSandboxDB';
     const SEED_KEY = 'dpSandboxSeeded';
-    const SEED_VERSION = '1';
+    const SEED_VERSION = '2';
     const rawSet = Storage.prototype.setItem;
     const store = (k, v) => rawSet.call(localStorage, k, v);
 
@@ -22,7 +22,7 @@
     function apply(prev, val) {
         if (val && val.__op === 'union') { const a = Array.isArray(prev) ? prev.slice() : []; val.v.forEach(x => { if (!a.includes(x)) a.push(x); }); return a; }
         if (val && val.__op === 'remove') { return (Array.isArray(prev) ? prev : []).filter(x => !val.v.includes(x)); }
-        if (isObj(val)) { const out = isObj(prev) ? { ...prev } : {}; for (const k in val) out[k] = apply(out[k], val[k]); return out; }
+        if (isObj(val)) { const out = isObj(prev) ? { ...prev } : {}; for (const k in val) { if (val[k] && val[k].__op === 'delete') delete out[k]; else out[k] = apply(out[k], val[k]); } return out; }
         return val;
     }
     window.__dbSet = async (path, data, merge) => { const db = load(); db[path] = merge ? apply(db[path], data) : apply(undefined, data); save(db); };
@@ -66,6 +66,9 @@
         store('dpUserId', ME.uid);
         store('authDecisionMade', '1');
         store('dpLastUpdated', String(now));
+        // Test notes, so the privacy check has something to move
+        const notes = { notesData: { sbx: 'Test note text' }, beatNotesData: { sbx: 'Test beat note' }, charactersData: { sbx: 'Test character note' } };
+        Object.keys(notes).forEach(k => store(k, JSON.stringify(notes[k])));
 
         const friends = [
             { uid: 'sbx-u1', username: 'test_ana', total: 42310, week: 3100, month: 9800, year: 42310 },
@@ -75,7 +78,14 @@
             { uid: 'sbx-u5', username: 'test_eli', total: 27440, week: 2050, month: 6700, year: 27440 }
         ];
         const db = {};
-        db['users/' + ME.uid] = { username: 'sandbox_me', displayName: ME.displayName, photoURL: '', totalWords: total, wordsThisWeek: 1650, wordsThisMonth: 5200, wordsThisYear: total, friends: friends.map(f => f.uid) };
+        // This writer starts as the live site has most writers today: projects and
+        // notes copied in BOTH the public profile and the owner-only record.
+        const writerData = { draftPunkData: JSON.parse(localStorage.getItem('draftPunkData')), notesData: notes.notesData,
+            beatNotesData: notes.beatNotesData, charactersData: notes.charactersData, wordRunnerData: null, dpStreak: null, updatedAt: now };
+        db['users/' + ME.uid] = { username: 'sandbox_me', displayName: ME.displayName, photoURL: '', totalWords: total, wordsThisWeek: 1650, wordsThisMonth: 5200, wordsThisYear: total, friends: friends.map(f => f.uid), ...writerData };
+        db['users/' + ME.uid + '/private/data'] = { ...writerData };
+        // The chapters are already in the cloud too
+        chapters.forEach(c => { db['users/' + ME.uid + '/writing/' + c.id] = { ...c, projectId: 'sbx-p1', syncedWords: 0 }; });
         db['usernames/sandbox_me'] = { uid: ME.uid };
         friends.forEach(f => {
             db['users/' + f.uid] = { username: f.username, displayName: f.username, photoURL: '', totalWords: f.total, wordsThisWeek: f.week, wordsThisMonth: f.month, wordsThisYear: f.year, friends: [ME.uid], updatedAt: now - day };
@@ -114,16 +124,61 @@
     // ── SANDBOX badge ──────────────────────────────────────────────────────────
     // Small and in a corner, so it doesn't change the layout being tested.
     // Tap it to reveal the reset button.
+    // Test tools (only in the sandbox)
+    const DATA_FIELDS = ['draftPunkData', 'notesData', 'beatNotesData', 'charactersData', 'wordRunnerData', 'dpStreak'];
+    window.dpSandboxTools = {
+        toggleFail() {
+            const on = localStorage.getItem('dpSandboxFailWriting') === '1';
+            store('dpSandboxFailWriting', on ? '0' : '1');
+            return on ? 'CLOUD SAVES: WORKING' : 'CLOUD SAVES: FAILING';
+        },
+        async otherDevice() {
+            const path = 'users/' + ME.uid + '/writing/sbx-c3';
+            const c = await window.__dbGet(path);
+            if (!c) return 'Chapter 3 not found in the cloud. Reset test data first.';
+            c.content = 'Test text written on ANOTHER DEVICE at ' + new Date().toLocaleTimeString() + '.';
+            c.wordCount = c.content.split(/\s+/).length; c.updatedAt = Date.now();
+            await window.__dbSet(path, c, false);
+            return 'Done: chapter 3 was changed "on another device". Reload the Write page.';
+        },
+        async profile() {
+            const pub = await window.__dbGet('users/' + ME.uid) || {};
+            const priv = await window.__dbGet('users/' + ME.uid + '/private/data');
+            const inPub = DATA_FIELDS.filter(k => k in pub);
+            return 'PUBLIC PROFILE (other writers can read): ' + (inPub.length ? 'still holds ' + inPub.join(', ') : 'no projects or notes') +
+                (pub.publicCopyClearedAt ? '. Cleared ' + new Date(pub.publicCopyClearedAt).toLocaleTimeString() : '') +
+                ' | OWNER-ONLY RECORD: ' + (priv ? 'holds ' + DATA_FIELDS.filter(k => priv[k] != null).join(', ') : 'missing');
+        }
+    };
+
+    // ── SANDBOX badge ──────────────────────────────────────────────────────────
+    // Small and in a corner, so it doesn't change the layout being tested.
+    // Tap it to reveal the test tools.
     function badge() {
         if (document.getElementById('dpSandboxBadge')) return;
         if (!/^\[SANDBOX\]/.test(document.title)) document.title = '[SANDBOX] ' + document.title;
         const b = document.createElement('div');
         b.id = 'dpSandboxBadge';
-        b.style.cssText = 'position:fixed;left:6px;bottom:6px;z-index:100000;background:#ffd400;color:#000;font:700 10px/1 "Courier New",monospace;letter-spacing:1px;padding:5px 7px;border:1px solid #000;opacity:.85;display:flex;gap:6px;align-items:center;';
-        b.innerHTML = '<span>SANDBOX</span><button type="button" style="display:none;font:700 10px \'Courier New\',monospace;background:#000;color:#ffd400;border:0;padding:4px 6px;">RESET TEST DATA</button>';
-        const btn = b.querySelector('button');
-        b.querySelector('span').addEventListener('click', () => { btn.style.display = btn.style.display === 'none' ? '' : 'none'; });
-        btn.addEventListener('click', window.dpSandboxReset);
+        b.style.cssText = 'position:fixed;left:6px;bottom:6px;z-index:100000;background:#ffd400;color:#000;font:700 10px/1.3 "Courier New",monospace;letter-spacing:1px;padding:5px 7px;border:1px solid #000;opacity:.92;max-width:min(92vw,420px);';
+        const bs = 'display:block;width:100%;margin-top:5px;font:700 10px \'Courier New\',monospace;background:#000;color:#ffd400;border:0;padding:6px;text-align:left;cursor:pointer;';
+        const failing = localStorage.getItem('dpSandboxFailWriting') === '1';
+        b.innerHTML = '<span id="dpSbxLabel" style="cursor:pointer;">SANDBOX' + (failing ? ' · CLOUD SAVES FAILING' : '') + '</span>' +
+            '<div id="dpSbxTools" style="display:none;">' +
+            `<button type="button" data-t="fail" style="${bs}">${failing ? 'CLOUD SAVES: FAILING (TAP TO FIX)' : 'CLOUD SAVES: WORKING (TAP TO BREAK)'}</button>` +
+            `<button type="button" data-t="other" style="${bs}">ANOTHER DEVICE EDITS CHAPTER 3</button>` +
+            `<button type="button" data-t="profile" style="${bs}">CHECK MY PUBLIC PROFILE</button>` +
+            `<button type="button" data-t="reset" style="${bs}">RESET TEST DATA</button>` +
+            '<div id="dpSbxOut" style="margin-top:5px;font-weight:400;letter-spacing:0;"></div></div>';
+        const tools = b.querySelector('#dpSbxTools'), out = b.querySelector('#dpSbxOut');
+        b.querySelector('#dpSbxLabel').addEventListener('click', () => { tools.style.display = tools.style.display === 'none' ? '' : 'none'; });
+        tools.addEventListener('click', async e => {
+            const t = e.target.dataset && e.target.dataset.t; if (!t) return;
+            if (t === 'reset') return window.dpSandboxReset();
+            if (t === 'fail') { const label = window.dpSandboxTools.toggleFail(); e.target.textContent = label.includes('FAILING') ? 'CLOUD SAVES: FAILING (TAP TO FIX)' : 'CLOUD SAVES: WORKING (TAP TO BREAK)';
+                b.querySelector('#dpSbxLabel').textContent = 'SANDBOX' + (label.includes('FAILING') ? ' · CLOUD SAVES FAILING' : ''); out.textContent = label; return; }
+            out.textContent = '…';
+            out.textContent = t === 'other' ? await window.dpSandboxTools.otherDevice() : await window.dpSandboxTools.profile();
+        });
         document.body.appendChild(b);
     }
     if (document.body) badge(); else document.addEventListener('DOMContentLoaded', badge);

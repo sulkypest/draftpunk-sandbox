@@ -10,8 +10,12 @@ export const where = (f, op, v) => ({ where: [f, op, v] });
 export const orderBy = (f, dir) => ({ order: [f, dir || 'asc'] }), limit = n => ({ lim: n });
 const matches = (d, filters) => (filters || []).every(({ where: [f, op, v] }) => op === '==' ? d[f] === v : op === 'array-contains' ? (Array.isArray(d[f]) && d[f].includes(v)) : true);
 export const arrayUnion = (...v) => ({ __op: 'union', v });
+export const deleteField = () => ({ __op: 'delete' });
 export const arrayRemove = (...v) => ({ __op: 'remove', v });
-export async function setDoc(ref, data, opts) { await window.__dbSet(ref.path, JSON.parse(JSON.stringify(data)), !!(opts && opts.merge)); }
+export async function setDoc(ref, data, opts) {
+    // Sandbox tool: "Cloud saves: failing" makes chapter saves fail, to test the warning
+    if (localStorage.getItem('dpSandboxFailWriting') === '1' && /\/writing\/[^/]+$/.test(ref.path)) throw new Error('Sandbox: simulated cloud save failure');
+    await window.__dbSet(ref.path, JSON.parse(JSON.stringify(data)), !!(opts && opts.merge)); }
 export async function getDoc(ref) { const d = await window.__dbGet(ref.path); return { id: ref.id, exists: () => d != null, data: () => d }; }
 export async function deleteDoc(ref) { await window.__dbDel(ref.path); }
 export async function getDocs(c) { let list = (await window.__dbList(c.path)).filter(([id, d]) => matches(d, c.filters)); if (c.order) { const [f, dir] = c.order, m = dir === 'desc' ? -1 : 1; list.sort((a, b) => ((a[1][f] ?? 0) > (b[1][f] ?? 0) ? 1 : (a[1][f] ?? 0) < (b[1][f] ?? 0) ? -1 : 0) * m); } if (c.lim) list = list.slice(0, c.lim); return { docs: list.map(([id, d]) => ({ id, data: () => d, ref: { path: c.path + '/' + id } })), empty: !list.length, size: list.length }; }
