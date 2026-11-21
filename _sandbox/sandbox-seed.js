@@ -8,7 +8,7 @@
 (function () {
     const DB_KEY = 'dpSandboxDB';
     const SEED_KEY = 'dpSandboxSeeded';
-    const SEED_VERSION = '2';
+    const SEED_VERSION = '3';
     const rawSet = Storage.prototype.setItem;
     const store = (k, v) => rawSet.call(localStorage, k, v);
 
@@ -67,7 +67,11 @@
         store('authDecisionMade', '1');
         store('dpLastUpdated', String(now));
         // Test notes, so the privacy check has something to move
-        const notes = { notesData: { sbx: 'Test note text' }, beatNotesData: { sbx: 'Test beat note' }, charactersData: { sbx: 'Test character note' } };
+        const notes = {
+            notesData: { 'sbx-p1': [{ id: 'sbx-n1', title: 'Test note 1', body: 'Test note text.', createdAt: now - day }] },
+            beatNotesData: { 'sbx-p1': { 'Catalyst': [{ id: 1, title: 'Test beat note', text: 'Test beat text.' }] } },
+            charactersData: { 'sbx-p1': { chars: [{ id: 'sbx-ch1', name: 'Test character' }] } }
+        };
         Object.keys(notes).forEach(k => store(k, JSON.stringify(notes[k])));
 
         const friends = [
@@ -141,12 +145,41 @@
             await window.__dbSet(path, c, false);
             return 'Done: chapter 3 was changed "on another device". Reload the Write page.';
         },
+        async otherDeviceNote() {
+            const path = 'users/' + ME.uid + '/private/data';
+            const d = await window.__dbGet(path);
+            if (!d || !d.notesData) return 'No notes in the cloud yet. Reload once, then try again.';
+            const list = d.notesData['sbx-p1'] = d.notesData['sbx-p1'] || [];
+            list.push({ id: 'other-' + Date.now(), title: 'Note from another device', body: 'Added on ANOTHER DEVICE at ' + new Date().toLocaleTimeString() + '.', createdAt: Date.now() });
+            d.updatedAt = Date.now();
+            await window.__dbSet(path, d, false);
+            return 'Done: another device added a note. Add or edit a note here too, then reload the Notes page.';
+        },
+        async otherDeviceEditFirst() {
+            const path = 'users/' + ME.uid + '/private/data';
+            const d = await window.__dbGet(path);
+            const n = d && d.notesData && (d.notesData['sbx-p1'] || [])[0];
+            if (!n) return 'No notes in the cloud yet.';
+            n.body = 'Edited on ANOTHER DEVICE at ' + new Date().toLocaleTimeString() + '.';
+            d.updatedAt = Date.now();
+            await window.__dbSet(path, d, false);
+            return 'Done: another device edited note 1. Edit note 1 here too, then reload: the newer edit is used and the other is in Account → Recovered copies.';
+        },
+        async dayPassed() {
+            const path = 'users/' + ME.uid;
+            const p = await window.__dbGet(path);
+            if (!p || !p.cleanupFirstCheckAt) return 'The first privacy check hasn\'t run yet. Make an edit, wait a moment, then try again.';
+            p.cleanupFirstCheckAt -= 25 * 3600 * 1000;
+            await window.__dbSet(path, p, false);
+            return 'Done: the first privacy check now looks 25 hours old. Make any edit (or reload) to run the second check.';
+        },
         async profile() {
             const pub = await window.__dbGet('users/' + ME.uid) || {};
             const priv = await window.__dbGet('users/' + ME.uid + '/private/data');
             const inPub = DATA_FIELDS.filter(k => k in pub);
             return 'PUBLIC PROFILE (other writers can read): ' + (inPub.length ? 'still holds ' + inPub.join(', ') : 'no projects or notes') +
-                (pub.publicCopyClearedAt ? '. Cleared ' + new Date(pub.publicCopyClearedAt).toLocaleTimeString() : '') +
+                (pub.publicCopyClearedAt ? '. Cleared ' + new Date(pub.publicCopyClearedAt).toLocaleTimeString()
+                    : pub.cleanupFirstCheckAt ? '. First check passed ' + new Date(pub.cleanupFirstCheckAt).toLocaleString() + '; removed after a second check 24h+ later' : '. No check passed yet') +
                 ' | OWNER-ONLY RECORD: ' + (priv ? 'holds ' + DATA_FIELDS.filter(k => priv[k] != null).join(', ') : 'missing');
         }
     };
@@ -166,7 +199,10 @@
             '<div id="dpSbxTools" style="display:none;">' +
             `<button type="button" data-t="fail" style="${bs}">${failing ? 'CLOUD SAVES: FAILING (TAP TO FIX)' : 'CLOUD SAVES: WORKING (TAP TO BREAK)'}</button>` +
             `<button type="button" data-t="other" style="${bs}">ANOTHER DEVICE EDITS CHAPTER 3</button>` +
+            `<button type="button" data-t="note" style="${bs}">ANOTHER DEVICE ADDS A NOTE</button>` +
+            `<button type="button" data-t="editnote" style="${bs}">ANOTHER DEVICE EDITS NOTE 1</button>` +
             `<button type="button" data-t="profile" style="${bs}">CHECK MY PUBLIC PROFILE</button>` +
+            `<button type="button" data-t="day" style="${bs}">PRETEND A DAY HAS PASSED</button>` +
             `<button type="button" data-t="reset" style="${bs}">RESET TEST DATA</button>` +
             '<div id="dpSbxOut" style="margin-top:5px;font-weight:400;letter-spacing:0;"></div></div>';
         const tools = b.querySelector('#dpSbxTools'), out = b.querySelector('#dpSbxOut');
@@ -177,7 +213,8 @@
             if (t === 'fail') { const label = window.dpSandboxTools.toggleFail(); e.target.textContent = label.includes('FAILING') ? 'CLOUD SAVES: FAILING (TAP TO FIX)' : 'CLOUD SAVES: WORKING (TAP TO BREAK)';
                 b.querySelector('#dpSbxLabel').textContent = 'SANDBOX' + (label.includes('FAILING') ? ' · CLOUD SAVES FAILING' : ''); out.textContent = label; return; }
             out.textContent = '…';
-            out.textContent = t === 'other' ? await window.dpSandboxTools.otherDevice() : await window.dpSandboxTools.profile();
+            const T = window.dpSandboxTools;
+            out.textContent = await ({ other: T.otherDevice, note: T.otherDeviceNote, editnote: T.otherDeviceEditFirst, day: T.dayPassed, profile: T.profile }[t])();
         });
         document.body.appendChild(b);
     }
