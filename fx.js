@@ -107,7 +107,10 @@
     'use strict';
     const SHEETS = [{"cols":6,"idle":6,"hurt":2,"die":0},{"cols":6,"idle":6,"hurt":2,"die":3},{"cols":6,"idle":6,"hurt":2,"die":3},{"cols":6,"idle":6,"hurt":2,"die":3},{"cols":6,"idle":6,"hurt":2,"die":3},{"cols":6,"idle":6,"hurt":2,"die":2},{"cols":6,"idle":6,"hurt":2,"die":3},{"cols":10,"idle":10,"hurt":3,"die":4},{"cols":10,"idle":10,"hurt":3,"die":4},{"cols":6,"idle":6,"hurt":2,"die":3},{"cols":10,"idle":10,"hurt":2,"die":3},{"cols":10,"idle":10,"hurt":3,"die":4},{"cols":10,"idle":10,"hurt":3,"die":4},{"cols":6,"idle":6,"hurt":2,"die":3},{"cols":10,"idle":10,"hurt":3,"die":4}];
     const CELL_W = 614, CELL_H = 333, SQ = 256, SQ_X = 179;
-    const still = n => `bosses-anim/boss${n}-still.webp`;
+    // Images are cached hard by the service worker (cache-first), so the
+    // version goes in the URL: bump ART_V whenever the boss art changes.
+    const ART_V = '3';
+    const still = n => `bosses-anim/boss${n}-still.webp?v=${ART_V}`;
 
     // n: 1-based boss number.
     // opts.full: show the whole cell (room for the death fall; element should
@@ -118,7 +121,7 @@
         if (!el || !s) return null;
         if (el._dpBoss) el._dpBoss.stop();   // re-used element (pop-ups): one animation at a time
         const full = !!(opts && opts.full);
-        el.style.backgroundImage = `url(bosses-anim/boss${n}.webp)`;
+        el.style.backgroundImage = `url(bosses-anim/boss${n}.webp?v=${ART_V})`;
         el.style.backgroundRepeat = 'no-repeat';
         let row = 0, frame = 0, count = s.idle, onDone = null, timer = null;
         const reduced = root.DPFx && root.DPFx.reduced();
