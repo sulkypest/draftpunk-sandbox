@@ -9,6 +9,7 @@ export const httpsCallable = (fns, name) => async (data) => {
     await wait(400);
     // Admin: sandbox_me is the admin when localStorage dpSandboxAdmin = '1'
     if (name === 'claimAdmin') return { data: { admin: localStorage.getItem('dpSandboxAdmin') === '1' } };
+    if (name === 'issueWritingRecord') return { data: await issueWritingRecord(data || {}) };
     const email = String((data && data.email) || '').trim().toLowerCase();
     if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) fail('invalid-argument', 'bad-email');
     if (name === 'requestSignInCode') {
@@ -27,3 +28,30 @@ export const httpsCallable = (fns, name) => async (data) => {
     }
     fail('not-found', 'unknown-function');
 };
+
+// Writing Record share links: does what the real Cloud Function does
+// (firebase/functions/index.js, issueWritingRecord), using the same
+// record-core.js, against the sandbox's pretend database.
+async function issueWritingRecord({ projectId, shareId }) {
+    await import('../../firebase/functions/record-core.js');
+    const core = window.DPRecordCore;
+    const uid = window.__mockUser && window.__mockUser.uid;
+    if (!uid) fail('unauthenticated', 'sign-in');
+    if (typeof projectId !== 'string' || !/^[\w-]{1,120}$/.test(projectId)) fail('invalid-argument', 'project');
+    if (shareId != null && !/^[a-f0-9]{24}$/.test(String(shareId))) fail('invalid-argument', 'share');
+    if (shareId) { const ex = await window.__dbGet('evidenceShares/' + shareId); if (!ex || ex.uid !== uid) fail('permission-denied', 'not-yours'); }
+    const hex = n => Array.from(crypto.getRandomValues(new Uint8Array(n)), b => b.toString(16).padStart(2, '0')).join('');
+    const id = shareId || hex(12);
+    const priv = await window.__dbGet('users/' + uid + '/private/data') || {};
+    const pub = await window.__dbGet('users/' + uid) || {};
+    const project = priv.draftPunkData && priv.draftPunkData.projects && priv.draftPunkData.projects[projectId];
+    if (!project) fail('not-found', 'project');
+    const list = async c => (await window.__dbList('users/' + uid + '/' + c)).map(([i, d]) => ({ ...d, id: i })).filter(d => d.projectId === projectId);
+    const now = Date.now();
+    const { snapshot, text } = core.buildSnapshot({ title: project.title, author: pub.username || '', chapters: await list('writing'), evidence: await list('evidence'), now });
+    await window.__dbSet('evidenceShares/' + id, { ...snapshot, uid, createdAt: now, issuedBy: 'draft-punk', issuedAt: now, fingerprint: core.fingerprint(text, hex(6)) }, false);
+    const sh = await window.__dbGet('users/' + uid + '/evidence/_shares') || { ids: [] };
+    if (!sh.ids.includes(id)) sh.ids.push(id);
+    await window.__dbSet('users/' + uid + '/evidence/_shares', sh, false);
+    return { id, words: snapshot.totals.words, issuedAt: now };
+}
