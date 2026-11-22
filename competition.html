@@ -1,0 +1,191 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <script src="_sandbox/sandbox-seed.js"></script>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="robots" content="noindex">
+    <title>COMPETITION — DRAFT PUNK</title>
+    <link rel="icon" href="DRAFTPUNK.png" type="image/png">
+    <link rel="stylesheet" href="style.css?v=20261122e">
+    <script src="sentry.js?v=20261122e"></script>
+    <style>
+        .cp { max-width: 720px; margin: 0 auto; padding: 20px 16px 80px; font-family: var(--font-mono); color: var(--text); }
+        .cp-preview { background: var(--neon); color: var(--bg); font-size: 0.7rem; letter-spacing: 2px; padding: 6px 10px; text-align: center; margin-bottom: 18px; }
+        .cp-kicker { font-size: 0.7rem; letter-spacing: 3px; color: var(--text-dim); margin: 0 0 6px; }
+        .cp-title { font-family: var(--font-display); font-size: clamp(2rem, 8vw, 3rem); line-height: 1; letter-spacing: 1px; margin: 0 0 16px; }
+        .cp-facts { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1px; background: var(--border-mid); border: 1px solid var(--border-mid); margin-bottom: 8px; }
+        .cp-fact { background: var(--panel); padding: 10px 12px; }
+        .cp-fact dt { font-size: 0.65rem; letter-spacing: 2px; color: var(--text-dim); margin-bottom: 4px; }
+        .cp-fact dd { margin: 0; font-size: 0.85rem; font-weight: 700; line-height: 1.4; }
+        .cp-fact small { display: block; font-weight: 400; color: var(--text-dim); font-size: 0.7rem; }
+        .cp-count { font-size: 0.8rem; color: var(--text-dim); margin: 0 0 22px; }
+        .cp-count strong { color: var(--text); }
+        .cp-theme { border: 2px solid var(--neon); padding: 18px 18px 20px; margin-bottom: 26px; background: var(--panel); }
+        .cp-theme h2, .cp-sec h2 { font-size: 0.75rem; letter-spacing: 3px; margin: 0 0 12px; color: var(--neon); }
+        .cp-theme-text { font-family: var(--font-editor, Literata, Georgia, serif); font-size: 1.15rem; line-height: 1.7; min-height: 6.8em; white-space: pre-wrap; }
+        .cp-placeholder { color: var(--text-dim); font-style: italic; }
+        .cp-sec { margin-bottom: 28px; }
+        .cp-map { position: relative; height: 150px; margin: 8px 48px 6px 22px; }
+        .cp-track { position: absolute; left: 0; right: 0; bottom: 34px; height: 8px; background: var(--border-mid); }
+        .cp-fill { position: absolute; left: 0; bottom: 34px; height: 8px; background: var(--neon); }
+        .cp-node { position: absolute; bottom: 30px; transform: translateX(-50%); text-align: center; }
+        .cp-node .cp-boss { width: 96px; height: 96px; display: block; margin: 0 auto 6px; }
+        .cp-node .cp-pip { width: 16px; height: 16px; border: 3px solid var(--text); background: var(--bg); border-radius: 50%; margin: 0 auto; }
+        .cp-node-label { position: absolute; top: 100%; left: 50%; transform: translateX(-50%); margin-top: 4px; font-size: 0.65rem; letter-spacing: 1px; white-space: nowrap; color: var(--text-dim); }
+        .cp-you { position: absolute; bottom: 26px; transform: translateX(-50%); width: 0; height: 0; border-left: 9px solid transparent; border-right: 9px solid transparent; border-top: 14px solid var(--neon); }
+        .cp-start { left: 0; }
+        .cp-progress { display: flex; justify-content: space-between; align-items: baseline; gap: 10px; flex-wrap: wrap; font-size: 0.85rem; margin: 26px 0 14px; }
+        .cp-progress strong { font-size: 1.4rem; font-family: var(--font-display); }
+        .cp-btn { display: block; width: 100%; padding: 14px; font-family: var(--font-mono); font-weight: 900; letter-spacing: 2px; font-size: 0.9rem; background: var(--neon); color: var(--bg); border: 0; cursor: pointer; }
+        .cp-note { font-size: 0.75rem; color: var(--text-dim); margin: 8px 0 0; line-height: 1.5; }
+        .cp-buddies { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; }
+        .cp-buddy { border: 1px solid var(--border-mid); background: var(--panel); padding: 10px 8px 12px; text-align: center; }
+        .cp-buddy.champion { border: 2px solid #d4a017; }
+        .cp-sprite { width: 128px; height: 128px; max-width: 100%; margin: -8px auto -4px; background-repeat: no-repeat; image-rendering: pixelated; animation: cpIdle 0.8s steps(4) infinite; }
+        .cp-sprite.f6 { animation: cpIdle6 1s steps(6) infinite; }
+        .cp-sprite.locked { filter: brightness(0) opacity(0.35); }
+        @keyframes cpIdle { from { background-position: 0 0; } to { background-position: -512px 0; } }
+        @keyframes cpIdle6 { from { background-position: 0 0; } to { background-position: -768px 0; } }
+        .cp-tier { font-size: 0.65rem; letter-spacing: 2px; font-weight: 900; margin: 0 0 4px; }
+        .cp-bname { font-size: 0.75rem; font-weight: 700; margin: 0 0 4px; }
+        .cp-how { font-size: 0.65rem; color: var(--text-dim); line-height: 1.4; margin: 0; }
+        .cp-rules { font-size: 0.8rem; line-height: 1.7; padding-left: 18px; margin: 0; }
+        @media (max-width: 560px) {
+            .cp-facts { grid-template-columns: 1fr; }
+            .cp-buddies { grid-template-columns: repeat(2, 1fr); }
+            .cp-node .cp-boss { width: 72px; height: 72px; }
+        }
+        @media (prefers-reduced-motion: reduce) { .cp-sprite { animation: none; } }
+    </style>
+</head>
+<body class="sb-ready">
+    <nav class="app-nav">
+        <div class="nav-dropdown">
+            <button class="nav-dropdown-btn active" onclick="toggleDraftMenu()">DRAFT PUNK ▾</button>
+            <div class="nav-dropdown-menu" id="draftMenu">
+                <a href="index.html?dashboard" class="nav-dropdown-item">DASHBOARD</a>
+                <a href="wordrunner.html" class="nav-dropdown-item">WORDRUNNER</a>
+                <a href="competition.html" class="nav-dropdown-item" style="color:var(--neon);">COMPETITION</a>
+                <a href="groups.html" class="nav-dropdown-item">WRITING GROUPS</a>
+                <a href="messages.html" class="nav-dropdown-item">MESSAGES</a>
+            </div>
+        </div>
+        <a href="write.html" class="nav-center-btn">WRITE</a>
+        <div class="nav-dropdown" style="margin-left:auto;">
+            <button class="nav-dropdown-btn" onclick="toggleNotesMenu()">STORY ▾</button>
+            <div class="nav-dropdown-menu" id="notesMenu">
+                <a href="notes.html" class="nav-dropdown-item">NOTES</a>
+                <a href="beat-notes.html" class="nav-dropdown-item">BEATS</a>
+                <a href="characters.html" class="nav-dropdown-item">CHARACTERS</a>
+            </div>
+        </div>
+        <div class="nav-dropdown">
+            <button class="nav-dropdown-btn" onclick="toggleDataMenu()">··· <span id="syncDot" style="display:inline-block;width:7px;height:7px;border-radius:50%;margin-left:2px;vertical-align:middle;transition:background 0.4s;"></span></button>
+            <div class="nav-dropdown-menu" id="dataMenu">
+                <button class="nav-dropdown-item" id="themeToggle" onclick="toggleTheme()">LIGHT MODE</button>
+                <div style="border-top:1px solid var(--border);margin:2px 0;"></div>
+                <button class="nav-dropdown-item" onclick="exportData(); toggleDataMenu()">⬇ BACKUP</button>
+                <button class="nav-dropdown-item" onclick="triggerImport(); toggleDataMenu()">⬆ RESTORE</button>
+                <div style="border-top:1px solid var(--border);margin:2px 0;"></div>
+                <button id="navSignIn" class="nav-dropdown-item" onclick="dpOpenSignIn(); toggleDataMenu()" style="color:var(--neon);">⊕ SIGN IN</button>
+                <div id="navUserInfo" style="display:none;">
+                    <div class="nav-dropdown-item" style="display:flex;align-items:center;gap:8px;cursor:default;">
+                        <img id="navAvatar" src="" style="width:20px;height:20px;border-radius:50%;border:1px solid var(--neon);">
+                        <span id="navUserName" style="color:var(--neon);font-size:0.75rem;"></span>
+                    </div>
+                    <button class="nav-dropdown-item" onclick="signOutUser(); toggleDataMenu()">⊖ SIGN OUT</button>
+                </div>
+                <div style="border-top:1px solid var(--border);margin:2px 0;"></div>
+                <a href="privacy.html" class="nav-dropdown-item">PRIVACY POLICY</a>
+                <a href="terms.html" class="nav-dropdown-item">TERMS OF SERVICE</a>
+            </div>
+        </div>
+    </nav>
+
+    <main class="cp">
+        <div class="cp-preview">PREVIEW · LAYOUT ONLY · NOT A LIVE COMPETITION</div>
+
+        <p class="cp-kicker">SHORT STORY COMPETITION</p>
+        <h1 class="cp-title">[Competition title]</h1>
+
+        <dl class="cp-facts">
+            <div class="cp-fact"><dt>WORD COUNT</dt><dd>800–1,000 words</dd></div>
+            <div class="cp-fact"><dt>OPENS</dt><dd id="cpOpens"></dd></div>
+            <div class="cp-fact"><dt>CLOSES</dt><dd id="cpCloses"></dd></div>
+        </dl>
+        <p class="cp-count" id="cpCount"></p>
+
+        <section class="cp-theme" aria-labelledby="cpThemeHead">
+            <h2 id="cpThemeHead">THEME</h2>
+            <div class="cp-theme-text"><span class="cp-placeholder">Theme text goes here. This box has room for a few lines or a short paragraph, set in the same typeface as the Write page, and grows if the theme is longer.</span></div>
+        </section>
+
+        <section class="cp-sec" aria-labelledby="cpStoryHead">
+            <h2 id="cpStoryHead">YOUR STORY</h2>
+            <div class="cp-map" aria-hidden="true">
+                <div class="cp-track"></div>
+                <div class="cp-fill" style="width:65%;"></div>
+                <div class="cp-node" style="left:0%;"><div class="cp-pip"></div><span class="cp-node-label">START</span></div>
+                <div class="cp-node" style="left:50%;"><span class="cp-boss" id="cpBoss1"></span><div class="cp-pip"></div><span class="cp-node-label">400 · HALFWAY</span></div>
+                <div class="cp-node" style="left:100%;"><span class="cp-boss" id="cpBoss2"></span><div class="cp-pip"></div><span class="cp-node-label">800 · FINAL BOSS</span></div>
+                <div class="cp-you" style="left:65%;"></div>
+            </div>
+            <div class="cp-progress">
+                <span><strong>520</strong> words</span>
+                <span>280 to go to reach 800 · stop at 1,000</span>
+            </div>
+            <button class="cp-btn" type="button" onclick="alert('Preview only.')">CONTINUE YOUR STORY</button>
+            <p class="cp-note">One story per writer. Writers aged 18 and over can enter. Your words count towards your streak, XP, buddies and the leaderboard.</p>
+        </section>
+
+        <section class="cp-sec" aria-labelledby="cpBuddiesHead">
+            <h2 id="cpBuddiesHead">COMPETITION BUDDIES</h2>
+            <div class="cp-buddies">
+                <div class="cp-buddy"><div class="cp-sprite f6" style="background-image:url(competition-buddies/duckling.png)"></div><p class="cp-tier">FINISHER</p><p class="cp-bname">Tiny Draft</p><p class="cp-how">Beat the final boss</p></div>
+                <div class="cp-buddy"><div class="cp-sprite locked" style="background-image:url(competition-buddies/hare.png)"></div><p class="cp-tier">ENTRANT</p><p class="cp-bname">Deadline Hopkins</p><p class="cp-how">Submit a valid entry</p></div>
+                <div class="cp-buddy"><div class="cp-sprite locked" style="background-image:url(competition-buddies/deer.png)"></div><p class="cp-tier">SHORTLISTED</p><p class="cp-bname">Doe Dénouement</p><p class="cp-how">Make the shortlist</p></div>
+                <div class="cp-buddy champion"><div class="cp-sprite locked" style="background-image:url(competition-buddies/fox.png)"></div><p class="cp-tier">CHAMPION</p><p class="cp-bname">Reynard Redraft</p><p class="cp-how">Win. Only one will ever exist</p></div>
+            </div>
+            <p class="cp-note">Competition buddies can't be earned once the competition closes. In this preview the Finisher is shown as earned and the rest as locked.</p>
+        </section>
+
+        <section class="cp-sec" aria-labelledby="cpRulesHead">
+            <h2 id="cpRulesHead">THE ESSENTIALS</h2>
+            <ul class="cp-rules">
+                <li>Write your story in Draft Punk, between the opening and closing times.</li>
+                <li>Between 800 and 1,000 words.</li>
+                <li>You keep the copyright. Winning stories are published on Draft Punk.</li>
+                <li>Prize winners show ID before payment.</li>
+                <li><span class="cp-placeholder">Full competition rules: link to follow.</span></li>
+            </ul>
+        </section>
+
+        <section class="cp-sec" aria-labelledby="cpPastHead">
+            <h2 id="cpPastHead">PAST WINNERS</h2>
+            <p class="cp-note">None yet.</p>
+        </section>
+    </main>
+
+    <script src="theme.js?v=20261122e"></script>
+    <script src="sidebar.js?v=20261122e"></script>
+    <script src="streak.js?v=20261122e"></script>
+    <script src="streak-ui.js?v=20261122e"></script>
+    <script src="backup.js?v=20261122e"></script>
+    <script src="fx.js?v=20261122e"></script>
+    <script>
+        // Preview dates: opened yesterday, runs for 2 weeks, UK time shown with the reader's own time.
+        (function () {
+            const open = new Date(); open.setDate(open.getDate() - 1); open.setHours(9, 0, 0, 0);
+            const close = new Date(open); close.setDate(close.getDate() + 14); close.setHours(23, 59, 0, 0);
+            const uk = d => d.toLocaleString('en-GB', { timeZone: 'Europe/London', weekday: 'short', day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }) + ' UK';
+            const local = d => 'Your time: ' + d.toLocaleString('en-GB', { weekday: 'short', day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' });
+            document.getElementById('cpOpens').innerHTML = uk(open) + '<small>' + local(open) + '</small>';
+            document.getElementById('cpCloses').innerHTML = uk(close) + '<small>' + local(close) + '</small>';
+            const ms = close - Date.now(), d = Math.floor(ms / 864e5), h = Math.floor(ms % 864e5 / 36e5);
+            document.getElementById('cpCount').innerHTML = `Open now. Closes in <strong>${d} days ${h} hours</strong>.`;
+            if (window.DPBossSprite) { DPBossSprite.attach(document.getElementById('cpBoss1'), 16); DPBossSprite.attach(document.getElementById('cpBoss2'), 17); }
+        })();
+    </script>
+</body>
+</html>
