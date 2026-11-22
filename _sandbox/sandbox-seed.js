@@ -8,11 +8,14 @@
 (function () {
     const DB_KEY = 'dpSandboxDB';
     const SEED_KEY = 'dpSandboxSeeded';
-    const SEED_VERSION = '3';
+    const SEED_VERSION = '4';
     const rawSet = Storage.prototype.setItem;
     const store = (k, v) => rawSet.call(localStorage, k, v);
 
-    const ME = { uid: 'sandbox-me', displayName: 'Sandbox Writer', photoURL: '' };
+    // localStorage dpSandboxNewAccount = '1' pretends this account was just created
+    // (after the age step went live), to test the new-account path.
+    const ME = { uid: 'sandbox-me', displayName: 'Sandbox Writer', photoURL: '',
+        metadata: { creationTime: localStorage.getItem('dpSandboxNewAccount') === '1' ? 'Tue, 01 Dec 2026 10:00:00 GMT' : 'Mon, 01 Jan 2024 10:00:00 GMT' } };
     window.__mockUser = ME;
 
     // ── Pretend database ───────────────────────────────────────────────────────
@@ -88,11 +91,13 @@
             beatNotesData: notes.beatNotesData, charactersData: notes.charactersData, wordRunnerData: null, dpStreak: null, updatedAt: now };
         db['users/' + ME.uid] = { username: 'sandbox_me', displayName: ME.displayName, photoURL: '', totalWords: total, wordsThisWeek: 1650, wordsThisMonth: 5200, wordsThisYear: total, friends: friends.map(f => f.uid), ...writerData };
         db['users/' + ME.uid + '/private/data'] = { ...writerData };
+        db['leaderboard/' + ME.uid] = { username: 'sandbox_me', totalWords: total, wordsThisWeek: 1650, wordsThisMonth: 5200, wordsThisYear: total, weekEndsAt: now + 3 * day, monthEndsAt: now + 10 * day, yearEndsAt: now + 40 * day };
         // The chapters are already in the cloud too
         chapters.forEach(c => { db['users/' + ME.uid + '/writing/' + c.id] = { ...c, projectId: 'sbx-p1', syncedWords: 0 }; });
         db['usernames/sandbox_me'] = { uid: ME.uid };
         friends.forEach(f => {
             db['users/' + f.uid] = { username: f.username, displayName: f.username, photoURL: '', totalWords: f.total, wordsThisWeek: f.week, wordsThisMonth: f.month, wordsThisYear: f.year, friends: [ME.uid], updatedAt: now - day };
+            db['leaderboard/' + f.uid] = { username: f.username, totalWords: f.total, wordsThisWeek: f.week, wordsThisMonth: f.month, wordsThisYear: f.year, weekEndsAt: now + 3 * day, monthEndsAt: now + 10 * day, yearEndsAt: now + 40 * day };
             db['usernames/' + f.username] = { uid: f.uid };
         });
         db['users/sbx-u6'] = { username: 'test_fay', displayName: 'test_fay', photoURL: '', totalWords: 500, friends: [] };

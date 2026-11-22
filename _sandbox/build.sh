@@ -7,7 +7,7 @@
 set -eu
 LIVE=$1; OUT=$2
 cd "$OUT"
-find . -mindepth 1 -maxdepth 1 ! -name .git ! -name _sandbox -exec rm -rf {} +
+find . -mindepth 1 -maxdepth 1 ! -name .git ! -name .github ! -name _sandbox -exec rm -rf {} +
 git -C "$LIVE" archive HEAD | tar -x -C "$OUT"
 rm -f CNAME
 sed -i "s#https://www.gstatic.com/firebasejs/10.12.0/#./_sandbox/fake-firebase/#g" sync.js
