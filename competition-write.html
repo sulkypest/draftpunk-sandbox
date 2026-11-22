@@ -1,0 +1,180 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <script src="_sandbox/sandbox-seed.js"></script>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="robots" content="noindex">
+    <title>COMPETITION STORY — DRAFT PUNK</title>
+    <link rel="icon" href="DRAFTPUNK.png" type="image/png">
+    <link rel="stylesheet" href="style.css?v=20261122e">
+    <link rel="stylesheet" href="comp-preview.css?v=2">
+    <script src="sentry.js?v=20261122e"></script>
+    <style>
+        .cw { max-width: 760px; margin: 0 auto; padding: 14px 16px 120px; font-family: var(--font-mono); color: var(--text); }
+        .cw-top { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-bottom: 10px; font-size: 0.75rem; letter-spacing: 1px; }
+        .cw-top a { color: var(--text); }
+        .cw-title { font-family: var(--font-display); font-size: 1.5rem; letter-spacing: 1px; margin: 0 0 8px; }
+        .cw-theme { margin-bottom: 14px; }
+        .cw-theme summary { cursor: pointer; font-size: 0.75rem; letter-spacing: 2px; color: var(--neon); font-weight: 900; }
+        .cw-theme .cp-theme { margin: 10px 0 0; }
+        .cw-map { margin: 6px 48px 0 22px; }
+        .cw-paper { background: var(--paper, var(--panel)); border: 1px solid var(--border-mid); padding: 22px 20px; margin-top: 34px; }
+        .cw-story-title { font-family: var(--font-mono); font-size: 0.7rem; letter-spacing: 2px; color: var(--text-dim); margin: 0 0 10px; }
+        .cw-editor { font-family: Literata, Georgia, serif; font-size: 1.1rem; line-height: 1.8; min-height: 50vh; outline: none; white-space: pre-wrap; overflow-wrap: anywhere; }
+        .cw-editor:empty::before { content: 'Start your story here.'; color: var(--text-dim); font-style: italic; }
+        .cw-bar { position: fixed; left: 0; right: 0; bottom: 0; z-index: 50; background: var(--bg); border-top: 2px solid var(--text); }
+        .cw-bar-in { max-width: 760px; margin: 0 auto; padding: 10px 16px; display: flex; align-items: center; gap: 12px; }
+        .cw-count { flex: 1; font-size: 0.8rem; line-height: 1.4; }
+        .cw-count strong { font-family: var(--font-display); font-size: 1.5rem; letter-spacing: 1px; }
+        .cw-count .warn { color: var(--red-ink); font-weight: 700; }
+        .cw-bar button { width: auto; min-width: 0; padding: 12px 16px; font-size: 0.8rem; letter-spacing: 2px; font-weight: 900; }
+        .cw-bar button:disabled { opacity: 0.4; cursor: not-allowed; }
+        .cw-saved { font-size: 0.65rem; color: var(--text-dim); letter-spacing: 1px; }
+        .cw-check { list-style: none; padding: 0; margin: 0 0 14px; font-size: 0.85rem; line-height: 1.6; }
+        .cw-check li { display: flex; gap: 10px; padding: 6px 0; border-bottom: 1px solid var(--border-mid); }
+        .cw-check li b { width: 1.2em; flex-shrink: 0; color: var(--neon); }
+        .cw-check li.bad b { color: var(--red-ink); }
+        .cw-record { font-size: 0.75rem; color: var(--text-dim); margin: 0 0 12px; line-height: 1.6; }
+        .cw-code { font-family: var(--font-display); font-size: 2rem; letter-spacing: 2px; margin: 6px 0 12px; color: var(--neon); }
+        .cw-new { text-align: center; border: 2px solid var(--neon); padding: 12px; margin: 12px 0 16px; }
+        .cw-new .cp-sprite { margin: -6px auto -2px; }
+    </style>
+</head>
+<body class="sb-ready">
+    <main class="cw">
+        <div class="cw-top">
+            <a href="competition.html">← COMPETITION</a>
+            <span class="cw-saved" id="cwSaved"></span>
+        </div>
+        <div class="cp-preview">PREVIEW · NOT A LIVE COMPETITION</div>
+        <h1 class="cw-title">[Competition title]</h1>
+        <details class="cw-theme">
+            <summary>SHOW THE THEME</summary>
+            <section class="cp-theme"><h2>THEME</h2><div class="cp-theme-text"><span class="cp-placeholder">Theme text goes here.</span></div></section>
+        </details>
+        <div class="cw-map" id="cwMap" aria-hidden="true"></div>
+        <div class="cw-paper">
+            <p class="cw-story-title">YOUR COMPETITION STORY · ONE CHAPTER</p>
+            <div class="cw-editor" id="cwEditor" contenteditable="true" role="textbox" aria-multiline="true" aria-label="Your competition story" spellcheck="true"></div>
+        </div>
+    </main>
+
+    <div class="cw-bar">
+        <div class="cw-bar-in">
+            <div class="cw-count" id="cwCount" aria-live="polite"></div>
+            <button type="button" id="cwSubmit" disabled>SUBMIT ENTRY</button>
+        </div>
+    </div>
+
+    <script src="theme.js?v=20261122e"></script>
+    <script src="fx.js?v=20261122e"></script>
+    <script src="comp-preview.js?v=1"></script>
+    <script>
+    (function () {
+        const C = window.DPComp, B = C.BAND;
+        const ed = document.getElementById('cwEditor'), countEl = document.getElementById('cwCount'), sub = document.getElementById('cwSubmit');
+        let st = C.load();
+        if (!st.started) { st.started = Date.now(); st.typed = 0; st.pasted = 0; C.save(st); }
+        ed.innerText = st.text || '';
+        const m = C.map(document.getElementById('cwMap'));
+        window.onFinisher = () => setTimeout(() => showBuddy('finisher'), 1400);
+
+        function render(animate) {
+            const w = C.words(ed.innerText);
+            m.update(w, animate);
+            let line;
+            if (w < B.min) line = `<strong>${w.toLocaleString()}</strong> words · ${(B.min - w).toLocaleString()} to go to ${B.min.toLocaleString()}`;
+            else if (w <= B.max) line = `<strong>${w.toLocaleString()}</strong> words · inside the band (${B.min.toLocaleString()}–${B.max.toLocaleString()})`;
+            else line = `<strong>${w.toLocaleString()}</strong> words · <span class="warn">${(w - B.max).toLocaleString()} over ${B.max.toLocaleString()}: trim to submit</span>`;
+            if (w >= B.cap) line += `<br><span class="warn">That's the limit for this story: ${B.cap.toLocaleString()} words.</span>`;
+            countEl.innerHTML = line;
+            sub.disabled = !!st.submittedAt || w < B.min || w > B.max;
+            if (st.submittedAt) sub.textContent = 'ENTERED';
+            return w;
+        }
+        let saveT = null;
+        function persist() {
+            st = C.load(); st.text = ed.innerText; st.words = C.words(st.text); C.save(st);
+            document.getElementById('cwSaved').textContent = 'SAVED ' + new Date().toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' });
+        }
+        // Hard cap: no new words once the story reaches the limit
+        ed.addEventListener('beforeinput', e => {
+            if (!/^insert/.test(e.inputType)) return;
+            const w = C.words(ed.innerText);
+            if (w >= B.cap && !/^insertParagraph|^insertLineBreak/.test(e.inputType) && /\S/.test(e.data || ' ')) { e.preventDefault(); }
+        });
+        // Pastes are counted for the Writing Record, and can't push past the limit
+        ed.addEventListener('paste', e => {
+            e.preventDefault();
+            const t = (e.clipboardData || window.clipboardData).getData('text/plain');
+            const room = B.cap - C.words(ed.innerText);
+            if (room <= 0) return;
+            const parts = t.trim().split(/\s+/).slice(0, room);
+            document.execCommand('insertText', false, parts.join(' '));
+            st = C.load(); st.pasted = (st.pasted || 0) + parts.length; C.save(st);
+        });
+        ed.addEventListener('input', () => { render(true); clearTimeout(saveT); saveT = setTimeout(persist, 600); });
+        render(false);
+
+        // ── Submit ──────────────────────────────────────────────────────────
+        function overlay(html) {
+            const o = document.createElement('div'); o.className = 'dp-acct-overlay';
+            o.innerHTML = `<div class="dp-acct-box" style="max-width:440px;">${html}</div>`;
+            document.body.appendChild(o); return o;
+        }
+        sub.onclick = () => {
+            persist(); st = C.load();
+            const w = C.words(st.text), pasted = st.pasted || 0;
+            const o = overlay(`
+                <h2>Submit your entry</h2>
+                <ul class="cw-check">
+                    <li><b>✓</b>${w.toLocaleString()} words, inside the ${B.min.toLocaleString()}–${B.max.toLocaleString()} band</li>
+                    <li><b>✓</b>Started after the competition opened</li>
+                    <li><b>✓</b>Age confirmed: 18 or over</li>
+                    <li class="${pasted ? 'bad' : ''}"><b>${pasted ? '!' : '✓'}</b>${pasted ? `${pasted.toLocaleString()} words were pasted in. Judges see this in your Writing Record.` : 'Every word typed in Draft Punk'}</li>
+                </ul>
+                <p class="cw-record">The judges get the story exactly as it is now, with an entry code instead of your name, and your Writing Record. Your own copy stays yours: you can keep editing it, but changes won't reach the judges.</p>
+                <label class="dp-acct-tick"><input type="checkbox" id="cwAgree"><span>I wrote this story myself, and I accept the <a href="competition.html#cpTermsHead">competition terms</a>.</span></label>
+                <button type="button" class="dp-acct-btn" id="cwGo" disabled style="margin-top:10px;">SUBMIT ENTRY</button>
+                <button type="button" class="dp-acct-later" id="cwCancel">NOT YET</button>`);
+            o.querySelector('#cwAgree').onchange = e => { o.querySelector('#cwGo').disabled = !e.target.checked; };
+            o.querySelector('#cwCancel').onclick = () => o.remove();
+            o.querySelector('#cwGo').onclick = () => {
+                st = C.load(); st.submittedAt = Date.now(); st.code = 'DP-2026-01-0042'; st.frozen = st.text; C.save(st);
+                o.remove(); render(false);
+                if (window.DPFx) DPFx.comic('ENTERED!', { tone: 'green' });
+                setTimeout(() => {
+                    const b = C.BUDDIES.entrant;
+                    const c = overlay(`
+                        <h2>You're in</h2>
+                        <p>Your entry code is</p>
+                        <div class="cw-code">${st.code}</div>
+                        <div class="cw-new">
+                            <p class="cp-tier">NEW COMPETITION BUDDY · ${b.tier}</p>
+                            <div class="cp-sprite" style="background-image:url(competition-buddies/${b.img}.png)"></div>
+                            <p class="cp-bname">${b.name}</p><p class="cp-how">${b.fact}</p>
+                        </div>
+                        <p class="cw-record">The shortlist and winner are announced after judging.</p>
+                        <a class="dp-acct-btn" href="competition.html">BACK TO THE COMPETITION</a>
+                        <button type="button" class="dp-acct-later" id="cwStay">KEEP READING MY STORY</button>`);
+                    c.querySelector('#cwStay').onclick = () => c.remove();
+                }, 1200);
+            };
+        };
+        function showBuddy(key) {
+            const b = C.BUDDIES[key];
+            const o = overlay(`
+                <div class="cw-new" style="margin-top:0;">
+                    <p class="cp-tier">NEW COMPETITION BUDDY · ${b.tier}</p>
+                    <div class="cp-sprite${b.frames === 6 ? ' f6' : ''}" style="background-image:url(competition-buddies/${b.img}.png)"></div>
+                    <p class="cp-bname">${b.name}</p><p class="cp-how">${b.fact}</p>
+                </div>
+                <p class="cw-record">You've beaten the final boss. Your story can be submitted any time before the competition closes, as long as it's no more than ${B.max.toLocaleString()} words.</p>
+                <button type="button" class="dp-acct-btn" id="cwOk">KEEP WRITING</button>`);
+            o.querySelector('#cwOk').onclick = () => { o.remove(); ed.focus(); };
+        }
+    })();
+    </script>
+</body>
+</html>

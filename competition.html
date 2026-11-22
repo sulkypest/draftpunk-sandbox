@@ -9,62 +9,7 @@
     <link rel="icon" href="DRAFTPUNK.png" type="image/png">
     <link rel="stylesheet" href="style.css?v=20261122e">
     <script src="sentry.js?v=20261122e"></script>
-    <style>
-        .cp { max-width: 720px; margin: 0 auto; padding: 20px 16px 80px; font-family: var(--font-mono); color: var(--text); }
-        .cp-preview { background: var(--neon); color: var(--bg); font-size: 0.7rem; letter-spacing: 2px; padding: 6px 10px; text-align: center; margin-bottom: 18px; }
-        .cp-kicker { font-size: 0.7rem; letter-spacing: 3px; color: var(--text-dim); margin: 0 0 6px; }
-        .cp-title { font-family: var(--font-display); font-size: clamp(2rem, 8vw, 3rem); line-height: 1; letter-spacing: 1px; margin: 0 0 16px; }
-        .cp-facts { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1px; background: var(--border-mid); border: 1px solid var(--border-mid); margin-bottom: 8px; }
-        .cp-fact { background: var(--panel); padding: 10px 12px; }
-        .cp-fact dt { font-size: 0.65rem; letter-spacing: 2px; color: var(--text-dim); margin-bottom: 4px; }
-        .cp-fact dd { margin: 0; font-size: 0.85rem; font-weight: 700; line-height: 1.4; }
-        .cp-fact small { display: block; font-weight: 400; color: var(--text-dim); font-size: 0.7rem; }
-        .cp-count { font-size: 0.8rem; color: var(--text-dim); margin: 0 0 22px; }
-        .cp-count strong { color: var(--text); }
-        .cp-theme { border: 2px solid var(--neon); padding: 18px 18px 20px; margin-bottom: 26px; background: var(--panel); }
-        .cp-theme h2, .cp-sec h2 { font-size: 0.75rem; letter-spacing: 3px; margin: 0 0 12px; color: var(--neon); }
-        .cp-theme-text { font-family: var(--font-editor, Literata, Georgia, serif); font-size: 1.15rem; line-height: 1.7; min-height: 6.8em; white-space: pre-wrap; }
-        .cp-placeholder { color: var(--text-dim); font-style: italic; }
-        .cp-sec { margin-bottom: 28px; }
-        .cp-map { position: relative; height: 150px; margin: 8px 48px 6px 22px; }
-        .cp-track { position: absolute; left: 0; right: 0; bottom: 34px; height: 8px; background: var(--border-mid); }
-        .cp-fill { position: absolute; left: 0; bottom: 34px; height: 8px; background: var(--neon); }
-        .cp-node { position: absolute; bottom: 30px; transform: translateX(-50%); text-align: center; }
-        .cp-node .cp-boss { width: 96px; height: 96px; display: block; margin: 0 auto 6px; }
-        .cp-node .cp-pip { width: 16px; height: 16px; border: 3px solid var(--text); background: var(--bg); border-radius: 50%; margin: 0 auto; }
-        .cp-node-label { position: absolute; top: 100%; left: 50%; transform: translateX(-50%); margin-top: 4px; font-size: 0.65rem; letter-spacing: 1px; white-space: nowrap; color: var(--text-dim); }
-        .cp-you { position: absolute; bottom: 26px; transform: translateX(-50%); width: 0; height: 0; border-left: 9px solid transparent; border-right: 9px solid transparent; border-top: 14px solid var(--neon); }
-        .cp-start { left: 0; }
-        .cp-progress { display: flex; justify-content: space-between; align-items: baseline; gap: 10px; flex-wrap: wrap; font-size: 0.85rem; margin: 26px 0 14px; }
-        .cp-progress strong { font-size: 1.4rem; font-family: var(--font-display); }
-        .cp-btn { display: block; width: 100%; padding: 14px; font-family: var(--font-mono); font-weight: 900; letter-spacing: 2px; font-size: 0.9rem; background: var(--neon); color: var(--bg); border: 0; cursor: pointer; }
-        .cp-note { font-size: 0.75rem; color: var(--text-dim); margin: 8px 0 0; line-height: 1.5; }
-        .cp-buddies { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; }
-        .cp-buddy { border: 1px solid var(--border-mid); background: var(--panel); padding: 10px 8px 12px; text-align: center; }
-        .cp-buddy.champion { border: 2px solid #d4a017; }
-        .cp-sprite { width: 128px; height: 128px; max-width: 100%; margin: -8px auto -4px; background-repeat: no-repeat; image-rendering: pixelated; animation: cpIdle 0.8s steps(4) infinite; }
-        .cp-sprite.f6 { animation: cpIdle6 1s steps(6) infinite; }
-        .cp-sprite.locked { filter: brightness(0) opacity(0.35); }
-        @keyframes cpIdle { from { background-position: 0 0; } to { background-position: -512px 0; } }
-        @keyframes cpIdle6 { from { background-position: 0 0; } to { background-position: -768px 0; } }
-        .cp-tier { font-size: 0.65rem; letter-spacing: 2px; font-weight: 900; margin: 0 0 4px; }
-        .cp-bname { font-size: 0.75rem; font-weight: 700; margin: 0 0 4px; }
-        .cp-how { font-size: 0.65rem; color: var(--text-dim); line-height: 1.4; margin: 0; }
-        .cp-mystery { width: 96px; height: 96px; margin: 8px auto 12px; border: 2px dashed var(--border-mid); display: flex; align-items: center; justify-content: center; font-family: var(--font-display); font-size: 2.6rem; color: var(--text-dim); }
-        .cp-terms summary { cursor: pointer; list-style: none; display: flex; align-items: center; gap: 8px; }
-        .cp-terms summary::-webkit-details-marker { display: none; }
-        .cp-terms summary::after { content: '+'; font-weight: 900; color: var(--neon); }
-        .cp-terms[open] summary::after { content: '−'; }
-        .cp-terms summary h2 { margin: 0; }
-        .cp-terms-body { padding-top: 12px; font-size: 0.8rem; line-height: 1.6; }
-        .cp-rules { font-size: 0.8rem; line-height: 1.7; padding-left: 18px; margin: 0; }
-        @media (max-width: 560px) {
-            .cp-facts { grid-template-columns: 1fr; }
-            .cp-buddies { grid-template-columns: repeat(2, 1fr); }
-            .cp-node .cp-boss { width: 72px; height: 72px; }
-        }
-        @media (prefers-reduced-motion: reduce) { .cp-sprite { animation: none; } }
-    </style>
+    <link rel="stylesheet" href="comp-preview.css?v=2">
 </head>
 <body class="sb-ready">
     <nav class="app-nav">
@@ -111,7 +56,7 @@
     </nav>
 
     <main class="cp">
-        <div class="cp-preview">PREVIEW · LAYOUT ONLY · NOT A LIVE COMPETITION</div>
+        <div class="cp-preview">PREVIEW · NOT A LIVE COMPETITION · <button type="button" class="cp-reset" id="cpReset" style="color:inherit;">START THE PREVIEW AGAIN</button></div>
 
         <p class="cp-kicker">SHORT STORY COMPETITION</p>
         <h1 class="cp-title">[Competition title]</h1>
@@ -130,31 +75,17 @@
 
         <section class="cp-sec" aria-labelledby="cpStoryHead">
             <h2 id="cpStoryHead">YOUR STORY</h2>
-            <div class="cp-map" aria-hidden="true">
-                <div class="cp-track"></div>
-                <div class="cp-fill" style="width:65%;"></div>
-                <div class="cp-node" style="left:0%;"><div class="cp-pip"></div><span class="cp-node-label">START</span></div>
-                <div class="cp-node" style="left:50%;"><span class="cp-boss" id="cpBoss1"></span><div class="cp-pip"></div><span class="cp-node-label">400 · HALFWAY</span></div>
-                <div class="cp-node" style="left:100%;"><span class="cp-boss" id="cpBoss2"></span><div class="cp-pip"></div><span class="cp-node-label">800 · FINAL BOSS</span></div>
-                <div class="cp-you" style="left:65%;"></div>
-            </div>
-            <div class="cp-progress">
-                <span><strong>520</strong> words</span>
-                <span>280 to go to reach 800 · stop at 1,000</span>
-            </div>
-            <button class="cp-btn" type="button" onclick="alert('Preview only.')">CONTINUE YOUR STORY</button>
+            <div id="cpEntered"></div>
+            <div id="cpMap" aria-hidden="true"></div>
+            <div class="cp-progress"><span><strong id="cpWords">0</strong> words</span><span id="cpToGo"></span></div>
+            <a class="cp-btn" id="cpGo" href="competition-write.html" style="text-align:center;text-decoration:none;">START YOUR STORY</a>
             <p class="cp-note">One story per writer. Writers aged 18 and over can enter. Your words count towards your streak, XP, buddies and the leaderboard.</p>
         </section>
 
         <section class="cp-sec" aria-labelledby="cpBuddiesHead">
             <h2 id="cpBuddiesHead">COMPETITION BUDDIES</h2>
-            <div class="cp-buddies">
-                <div class="cp-buddy"><div class="cp-sprite f6" style="background-image:url(competition-buddies/duckling.png)"></div><p class="cp-tier">FINISHER</p><p class="cp-bname">Tiny Draft</p><p class="cp-how">Earned: you beat the final boss</p></div>
-                <div class="cp-buddy"><div class="cp-mystery" aria-hidden="true">?</div><p class="cp-tier">ENTRANT</p><p class="cp-how">Submit a valid entry</p></div>
-                <div class="cp-buddy"><div class="cp-mystery" aria-hidden="true">?</div><p class="cp-tier">SHORTLISTED</p><p class="cp-how">Make the shortlist</p></div>
-                <div class="cp-buddy champion"><div class="cp-mystery" aria-hidden="true">?</div><p class="cp-tier">CHAMPION</p><p class="cp-how">Win. Only one will ever exist</p></div>
-            </div>
-            <p class="cp-note">Each buddy stays hidden until you earn it, and none can be earned once the competition closes. In this preview the Finisher has been earned.</p>
+            <div class="cp-buddies" id="cpBuddies"></div>
+            <p class="cp-note">Each buddy stays hidden until you earn it, and none can be earned once the competition closes.</p>
         </section>
 
         <section class="cp-sec" aria-labelledby="cpRulesHead">
@@ -195,18 +126,27 @@
     <script src="streak-ui.js?v=20261122e"></script>
     <script src="backup.js?v=20261122e"></script>
     <script src="fx.js?v=20261122e"></script>
+    <script src="comp-preview.js?v=1"></script>
     <script>
-        // Preview dates: opened yesterday, runs for 2 weeks, UK time shown with the reader's own time.
         (function () {
-            const open = new Date(); open.setDate(open.getDate() - 1); open.setHours(9, 0, 0, 0);
-            const close = new Date(open); close.setDate(close.getDate() + 14); close.setHours(23, 59, 0, 0);
-            const uk = d => d.toLocaleString('en-GB', { timeZone: 'Europe/London', weekday: 'short', day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }) + ' UK';
-            const local = d => 'Your time: ' + d.toLocaleString('en-GB', { weekday: 'short', day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' });
-            document.getElementById('cpOpens').innerHTML = uk(open) + '<small>' + local(open) + '</small>';
-            document.getElementById('cpCloses').innerHTML = uk(close) + '<small>' + local(close) + '</small>';
-            const ms = close - Date.now(), d = Math.floor(ms / 864e5), h = Math.floor(ms % 864e5 / 36e5);
-            document.getElementById('cpCount').innerHTML = `Open now. Closes in <strong>${d} days ${h} hours</strong>.`;
-            if (window.DPBossSprite) { DPBossSprite.attach(document.getElementById('cpBoss1'), 16); DPBossSprite.attach(document.getElementById('cpBoss2'), 17); }
+            const C = window.DPComp, st = C.load(), d = C.dates();
+            const uk = x => x.toLocaleString('en-GB', { timeZone: 'Europe/London', weekday: 'short', day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }) + ' UK';
+            const local = x => 'Your time: ' + x.toLocaleString('en-GB', { weekday: 'short', day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' });
+            document.getElementById('cpOpens').innerHTML = uk(d.open) + '<small>' + local(d.open) + '</small>';
+            document.getElementById('cpCloses').innerHTML = uk(d.close) + '<small>' + local(d.close) + '</small>';
+            document.getElementById('cpCount').innerHTML = `Open now. Closes in <strong>${C.closesIn()}</strong>.`;
+            const w = st.words || 0;
+            C.map(document.getElementById('cpMap')).update(w, false);
+            document.getElementById('cpWords').textContent = w.toLocaleString();
+            document.getElementById('cpToGo').textContent = w >= C.BAND.min ? `Inside the band: ${C.BAND.min.toLocaleString()}–${C.BAND.max.toLocaleString()}` : `${(C.BAND.min - w).toLocaleString()} to go to reach ${C.BAND.min.toLocaleString()}`;
+            const go = document.getElementById('cpGo');
+            if (st.submittedAt) {
+                document.getElementById('cpEntered').innerHTML = `<div class="cp-entered"><strong>ENTERED · ${st.code}</strong>Submitted ${new Date(st.submittedAt).toLocaleString('en-GB', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })}. The judges have the version you submitted; your own copy stays yours to keep and edit.</div>`;
+                go.textContent = 'OPEN YOUR STORY';
+            } else if (st.started) go.textContent = 'CONTINUE YOUR STORY';
+            const e = C.earned(st);
+            document.getElementById('cpBuddies').innerHTML = ['finisher', 'entrant', 'shortlisted', 'champion'].map(k => C.buddyCard(k, e[k])).join('');
+            document.getElementById('cpReset').onclick = () => { C.reset(); location.reload(); };
         })();
     </script>
 </body>

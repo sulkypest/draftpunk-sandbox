@@ -7,6 +7,7 @@
     <title>DRAFT PUNK</title>
     <link rel="icon" href="DRAFTPUNK.png" type="image/png">
     <link rel="stylesheet" href="style.css?v=20261122e">
+    <link rel="stylesheet" href="comp-preview.css?v=2">
     <link rel="stylesheet" href="landing.css?v=20261122e">
     <script>
     // Decide the first screen before anything is drawn, using the same test
@@ -50,6 +51,7 @@
             <button class="nav-dropdown-btn active" onclick="toggleDraftMenu()">DRAFT PUNK ▾</button>
             <div class="nav-dropdown-menu" id="draftMenu">
                 <a href="index.html?dashboard" class="nav-dropdown-item" style="color:var(--neon);">DASHBOARD</a>
+                <a href="competition.html" class="nav-dropdown-item">COMPETITION</a>
                 <a href="wordrunner.html" class="nav-dropdown-item">WORDRUNNER</a>
                 <a href="groups.html" class="nav-dropdown-item">WRITING GROUPS</a>
                 <a href="messages.html" class="nav-dropdown-item">MESSAGES</a>
@@ -281,6 +283,11 @@
                 <div class="wc-display-label">WORDS WRITTEN</div>
                 <div class="wc-display-gain" id="wcGain" aria-live="polite"></div>
             </div>
+            <a class="cp-banner" href="competition.html">
+                <span>SHORT STORY COMPETITION · OPEN NOW · PREVIEW</span>
+                <b>[Competition title]</b>
+                <span>800–1,000 words · one story each · </span><em>SEE THE THEME →</em>
+            </a>
 
             <section class="stage-map" aria-label="Stage map">
                 <div class="sm-head"><span>STAGE MAP</span><span id="smRange"></span></div>
