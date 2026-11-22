@@ -115,6 +115,27 @@ await t('can send a report', () => assertSucceeds(setDoc(doc(as('teen'), 'report
 await t('can\'t read reports', () => assertFails(getDoc(doc(as('teen'), 'reports/r1'))));
 await t('can\'t report as someone else', () => assertFails(setDoc(doc(as('child'), 'reports/r2'), rep)));
 
+// Admin and suspension
+const admin = env.authenticatedContext('ross', { admin: true }).firestore();
+await t('admin can read reports', () => assertSucceeds(getDoc(doc(admin, 'reports/r1'))));
+await t('admin can mark a report dealt with', () => assertSucceeds(setDoc(doc(admin, 'reports/r1'), { status: 'done', adminNote: 'warned', handledAt: 2 }, { merge: true })));
+await t('admin can\'t rewrite what was reported', () => assertFails(setDoc(doc(admin, 'reports/r1'), { excerpt: 'changed' }, { merge: true })));
+await t('non-admin can\'t claim admin by field', () => assertFails(getDoc(doc(env.authenticatedContext('teen', { admin: false }).firestore(), 'reports/r1'))));
+await t('admin can read a reported message', () => assertSucceeds(getDoc(doc(admin, 'messages/m1'))));
+await t('admin can delete a reported message', () => assertSucceeds(deleteDoc(doc(admin, 'messages/m1'))));
+await t('non-admin can\'t suspend', () => assertFails(setDoc(doc(as('teen'), 'suspended/adult'), { at: 1 })));
+await t('admin can suspend', () => assertSucceeds(setDoc(doc(admin, 'suspended/adult'), { at: 1, reason: 'test' })));
+await t('suspended writer can see why', () => assertSucceeds(getDoc(doc(as('adult'), 'suspended/adult'))));
+await t('suspended writer can still read their writing', () => assertSucceeds(getDoc(doc(as('adult'), 'users/adult/writing/ch1'))));
+await t('suspended writer can\'t add to their writing', () => assertFails(setDoc(doc(as('adult'), 'users/adult/writing/ch1'), { text: 'more' })));
+await t('suspended writer can\'t save project data', () => assertFails(setDoc(doc(as('adult'), 'users/adult/private/data'), { x: 2 })));
+await t('suspended writer can still delete their writing (account deletion)', () => assertSucceeds(deleteDoc(doc(as('adult'), 'users/adult/writing/ch1'))));
+await t('suspended writer can\'t message', () => assertFails(setDoc(doc(as('adult'), 'messages/s1'), msg('adult', 'teen'))));
+await t('suspended writer can\'t lift it', () => assertFails(deleteDoc(doc(as('adult'), 'suspended/adult'))));
+await t('admin can lift it', () => assertSucceeds(deleteDoc(doc(admin, 'suspended/adult'))));
+await t('writing works again after', () => assertSucceeds(setDoc(doc(as('adult'), 'users/adult/writing/ch2'), { text: 'back' })));
+await t('other writers unaffected throughout', () => assertSucceeds(setDoc(doc(as('teen'), 'users/teen/writing/ch1'), { text: 'x' })));
+
 console.log(`\n${n} passed, ${failed} failed`);
 await env.cleanup();
 process.exit(failed ? 1 : 0);

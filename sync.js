@@ -259,6 +259,7 @@ async function syncNow(user) {
 async function pushToCloud(user) { await syncNow(user); }
 
 async function writeCloud(user, data, stamp) {
+    if (_suspended) return;   // suspended: nothing new is saved (the database would refuse it)
     // PRIVACY MIGRATION, STEP 3: projects, notes, beat notes, characters, Word
     // Runner and the streak are saved ONLY to the owner-only record. It's saved
     // first; if it fails, nothing else is written and the sync dot shows the
@@ -884,6 +885,89 @@ async function renderBlockedSection() {
     });
 }
 
+// ── Suspension ───────────────────────────────────────────────────────────────
+// A suspended writer can sign in, read and export their writing, but not add
+// to it or use social features. Set and lifted in the admin area.
+let _suspended = localStorage.getItem('dpSuspended') === '1';
+function applySuspended() {
+    document.body.classList.toggle('dp-suspended', _suspended);
+    let bar = document.getElementById('dpSuspendedBar');
+    if (!_suspended) { if (bar) bar.remove(); return; }
+    if (!bar) {
+        bar = document.createElement('div');
+        bar.id = 'dpSuspendedBar';
+        bar.setAttribute('role', 'status');
+        bar.innerHTML = `Your account is suspended. You can read and export your writing, but not add to it.
+            Questions: <a href="mailto:support@draft-punk.com">support@draft-punk.com</a>`;
+        document.body.appendChild(bar);
+    }
+    lockEditing();
+}
+function lockEditing() {
+    document.querySelectorAll('[contenteditable="true"]').forEach(el => { if (!el.closest('.dp-acct-overlay')) el.setAttribute('contenteditable', 'false'); });
+    document.querySelectorAll('textarea').forEach(el => { if (!el.closest('.dp-acct-overlay')) el.readOnly = true; });
+}
+let _lockObserver = null;
+function watchForEditors() {
+    if (_lockObserver || !_suspended) return;
+    _lockObserver = new MutationObserver(() => { if (_suspended) lockEditing(); });
+    _lockObserver.observe(document.body, { childList: true, subtree: true });
+}
+async function checkSuspended(user) {
+    try {
+        const snap = await getDoc(doc(db, 'suspended', user.uid));
+        _suspended = snap.exists();
+        localStorage.setItem('dpSuspended', _suspended ? '1' : '0');
+    } catch (e) { return; }   // offline: keep what we knew
+    applySuspended();
+    watchForEditors();
+}
+window.dpIsSuspended = () => _suspended;
+document.addEventListener('DOMContentLoaded', () => { if (_suspended) { applySuspended(); watchForEditors(); } });
+
+// ── Admin area ───────────────────────────────────────────────────────────────
+// Used by admin.html only. The database rules decide what the admin can do;
+// these helpers just call it.
+window.dpAdmin = {
+    async check() {
+        if (!currentUser) return false;
+        const has = async force => { try { const t = await currentUser.getIdTokenResult(force); return !!(t.claims && t.claims.admin); } catch (e) { return false; } };
+        if (await has(false)) return true;
+        try { const r = await callFn('claimAdmin', {}); if (!r || !r.admin) return false; } catch (e) { return false; }
+        return has(true);
+    },
+    async reports() {
+        const snap = await getDocs(query(collection(db, 'reports'), orderBy('createdAt', 'desc'), limit(300)));
+        return snap.docs.map(d => ({ id: d.id, ...d.data() }));
+    },
+    async markReport(id, status, adminNote) {
+        await setDoc(doc(db, 'reports', id), { status, adminNote: String(adminNote || '').slice(0, 1000), handledAt: Date.now() }, { merge: true });
+    },
+    async item(path) {
+        if (!/^(messages\/[\w-]+|groups\/[\w-]+\/messages\/[\w-]+|shares\/[\w-]+)$/.test(path || '')) return null;
+        const snap = await getDoc(doc(db, ...path.split('/')));
+        return snap.exists() ? snap.data() : null;
+    },
+    async deleteItem(path) {
+        if (!/^(messages\/[\w-]+|groups\/[\w-]+\/messages\/[\w-]+|shares\/[\w-]+)$/.test(path || '')) throw new Error('Not allowed');
+        await deleteDoc(doc(db, ...path.split('/')));
+    },
+    async suspended() {
+        const snap = await getDocs(collection(db, 'suspended'));
+        return snap.docs.map(d => ({ uid: d.id, ...d.data() }));
+    },
+    async suspend(uid, username, reason, reportId) {
+        await setDoc(doc(db, 'suspended', uid), { at: Date.now(), username: username || '', reason: String(reason || '').slice(0, 500), reportId: reportId || '' });
+    },
+    async unsuspend(uid) { await deleteDoc(doc(db, 'suspended', uid)); },
+    async username(uid) {
+        try { const s = await getDoc(doc(db, 'leaderboard', uid)); return s.exists() ? (s.data().username || '') : ''; } catch (e) { return ''; }
+    },
+    async weekly() {
+        try { const s = await getDoc(doc(db, 'ops', 'weeklyNumbers')); return s.exists() ? s.data() : null; } catch (e) { return null; }
+    }
+};
+
 // ── Friend request badge ──────────────────────────────────────────────────────
 function updateRequestBadge(count) {
     if (document.body.classList.contains('dp-under-min')) count = 0;
@@ -947,6 +1031,8 @@ async function handleSignedIn(user) {
         localStorage.removeItem(BASE_KEY);
         localStorage.removeItem('dpRecovered');
         localStorage.removeItem('dpAccount');
+        localStorage.removeItem('dpSuspended');
+        _suspended = false;
     }
     localStorage.setItem('dpUserId', user.uid);
     loadPush().then(m => { if (m) m.initPush(app, () => auth.currentUser); });
@@ -1000,6 +1086,7 @@ async function continueAfterAuth(user) {
             console.warn('Non-critical post-auth check failed:', e);
         }
         checkAccount(user);
+        checkSuspended(user);
     }
 }
 
@@ -1690,6 +1777,7 @@ window.removeFriend = async function(friendUid) {
 
 // ── Writing subcollection sync ─────────────────────────────────────────────────
 window.pushWritingChapterToCloud = async function(chapter) {
+    if (_suspended) return;
     if (!currentUser) return;
     try {
         await setDoc(doc(db, 'users', currentUser.uid, 'writing', chapter.id), chapter, { merge: true });

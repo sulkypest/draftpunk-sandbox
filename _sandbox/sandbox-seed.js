@@ -15,7 +15,9 @@
     // localStorage dpSandboxNewAccount = '1' pretends this account was just created
     // (after the age step went live), to test the new-account path.
     const ME = { uid: 'sandbox-me', displayName: 'Sandbox Writer', photoURL: '',
-        metadata: { creationTime: localStorage.getItem('dpSandboxNewAccount') === '1' ? 'Tue, 01 Dec 2026 10:00:00 GMT' : 'Mon, 01 Jan 2024 10:00:00 GMT' } };
+        metadata: { creationTime: localStorage.getItem('dpSandboxNewAccount') === '1' ? 'Tue, 01 Dec 2026 10:00:00 GMT' : 'Mon, 01 Jan 2024 10:00:00 GMT' },
+        getIdToken: async () => 'sandbox-token',
+        getIdTokenResult: async () => ({ claims: { admin: localStorage.getItem('dpSandboxAdmin') === '1' } }) };
     window.__mockUser = ME;
 
     // ── Pretend database ───────────────────────────────────────────────────────

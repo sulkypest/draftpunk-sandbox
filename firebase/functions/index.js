@@ -357,6 +357,8 @@ exports.weeklyNumbers = onSchedule({ schedule: 'every monday 09:00', timeZone: '
     }
     const summary = lib.weeklySummary(users, days);
     logger.info('Weekly numbers', { newWriters: summary.newWriters, total: summary.total, codes: summary.codes });
+    try { await db.collection('ops').doc('weeklyNumbers').set({ title: summary.title, body: summary.body, at: Date.now() }); }
+    catch (e) { logger.warn('Weekly numbers not saved for the admin page', { e: e.message }); }
     await notifyAdmin(summary.title, summary.body);
 });
 
@@ -365,7 +367,7 @@ exports.weeklyNumbers = onSchedule({ schedule: 'every monday 09:00', timeZone: '
 // A writer reported a message, request, shared chapter or another writer.
 // Email the details to Sulk Media and push an alert to Ross. The item's
 // current text is looked up only for messages and shared chapters.
-const REPORTS_TO   = 'sulkmediaproduction@gmail.com';
+const REPORTS_TO   = 'reports@draft-punk.com';   // forwarded to Ross's inbox (set up in Squarespace)
 const REPORTS_FROM = 'Draft Punk <reports@mail.draft-punk.com>';
 exports.emailReport = onDocumentCreated({ document: 'reports/{reportId}', secrets: [RESEND_API_KEY, ADMIN_UID] }, async event => {
     const r = event.data && event.data.data();
@@ -384,7 +386,10 @@ exports.emailReport = onDocumentCreated({ document: 'reports/{reportId}', secret
             }
         } catch (e) { logger.warn('Report item lookup failed', { path: r.path, e: e.message }); }
     }
-    const { subject, text, html } = lib.reportEmail(r, reporterName, item);
+    const mail = lib.reportEmail(r, reporterName, item);
+    const subject = mail.subject;
+    const text = mail.text + `\n\nDeal with it in the admin area: ${SITE}admin.html`;
+    const html = mail.html + `<p style="font-family:sans-serif"><a href="${SITE}admin.html">Open the admin area</a></p>`;
     try {
         const res = await fetch('https://api.resend.com/emails', {
             method: 'POST',
@@ -448,4 +453,21 @@ exports.dailyHousekeeping = onSchedule({ schedule: 'every day 03:17', timeZone: 
     }
     logger.info('Daily housekeeping', { deleted: deleted.length, leaderboardFilled: filled });
     if (deleted.length) await notifyAdmin('DRAFT PUNK · UNDER-13 ACCOUNTS DELETED', `${deleted.length} account(s) that gave an under-13 birth date at sign-up were deleted.`);
+});
+
+
+// ── Admin (Nov 2026) ─────────────────────────────────────────────────────────
+// The admin page calls this once. If the caller is Ross's account (the
+// ADMIN_UID secret), it marks the account as admin, which the database rules
+// check. Anyone else gets { admin: false } and nothing changes.
+exports.claimAdmin = onCall({ enforceAppCheck: true, secrets: [ADMIN_UID] }, async request => {
+    const uid = request.auth && request.auth.uid;
+    const adminUid = (ADMIN_UID.value() || '').trim();
+    if (!uid || !adminUid || uid !== adminUid) return { admin: false };
+    const user = await admin.auth().getUser(uid);
+    if (!(user.customClaims && user.customClaims.admin === true)) {
+        await admin.auth().setCustomUserClaims(uid, { ...(user.customClaims || {}), admin: true });
+        logger.info('Admin claim set', { uid });
+    }
+    return { admin: true };
 });

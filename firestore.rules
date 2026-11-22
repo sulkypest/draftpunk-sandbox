@@ -40,9 +40,17 @@ service cloud.firestore {
       let years = request.time.year() - acc.birthYear;
       return years > minAge || (years == minAge && request.time.month() > acc.birthMonth);
     }
-    // Sender side: must have given a birth date, and be 16+
+    // Sender side: must have given a birth date, be 16+, and not be suspended
     function socialOk(uid) {
-      return exists(accountPath(uid)) && oldEnough(uid, 16);
+      return exists(accountPath(uid)) && oldEnough(uid, 16) && !isSuspended(uid);
+    }
+    // Admin: Ross's account, marked by the claimAdmin server function
+    function isAdmin() {
+      return request.auth != null && request.auth.token.admin == true;
+    }
+    // A suspended writer can read and export their writing but not add to it
+    function isSuspended(uid) {
+      return exists(/databases/$(database)/documents/suspended/$(uid));
     }
     // Receiving side: anyone who hasn't answered yet is still reachable (so
     // friends aren't cut off while everyone answers), unless they're under 16
@@ -72,11 +80,13 @@ service cloud.firestore {
       allow write: if request.auth != null && request.auth.uid == userId;
 
       match /writing/{chapterId} {
-        allow read, write: if request.auth != null && request.auth.uid == userId;
+        allow read, delete: if request.auth != null && request.auth.uid == userId;
+        allow create, update: if request.auth != null && request.auth.uid == userId && !isSuspended(userId);
 
         // Saved versions of a chapter (version history). Owner only.
         match /versions/{versionId} {
-          allow read, write: if request.auth != null && request.auth.uid == userId;
+          allow read, delete: if request.auth != null && request.auth.uid == userId;
+          allow create, update: if request.auth != null && request.auth.uid == userId && !isSuspended(userId);
         }
       }
 
@@ -84,7 +94,9 @@ service cloud.firestore {
       // data (privacy migration). Owner only. (The 'account' doc has its own
       // rules below.)
       match /private/{docId} {
-        allow read, write: if request.auth != null && request.auth.uid == userId && docId != 'account';
+        allow read, delete: if request.auth != null && request.auth.uid == userId && docId != 'account';
+        allow create, update: if request.auth != null && request.auth.uid == userId && docId != 'account'
+                              && !(docId == 'data' && isSuspended(userId));
       }
 
       // Birth date and terms acceptance. Owner only. The birth date can't be
@@ -122,10 +134,25 @@ service cloud.firestore {
       allow delete: if request.auth != null && request.auth.uid == userId;
     }
 
+    // Suspensions. Set and lifted by the admin only; the writer can see
+    // their own, so the app can explain it.
+    match /suspended/{userId} {
+      allow get: if request.auth != null && (request.auth.uid == userId || isAdmin());
+      allow list, write: if isAdmin();
+    }
+
+    // Weekly numbers, written by the server for the admin page
+    match /ops/{docId} {
+      allow get: if isAdmin() && docId == 'weeklyNumbers';
+    }
+
     // Reports of messages, requests, shared chapters or writers. Anyone
-    // signed in can send one; nobody can read them in the app (a server
-    // function emails them to Sulk Media).
+    // signed in can send one; only the admin can read them and mark them
+    // dealt with (a server function also emails them to Sulk Media).
     match /reports/{reportId} {
+      allow get, list: if isAdmin();
+      allow update: if isAdmin()
+                    && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status', 'adminNote', 'handledAt']);
       allow create: if request.auth != null
                     && request.resource.data.from == request.auth.uid
                     && request.resource.data.keys().hasOnly(['from', 'type', 'targetUid', 'targetUsername', 'path', 'excerpt', 'reason', 'note', 'createdAt'])
@@ -177,8 +204,8 @@ service cloud.firestore {
     }
 
     match /messages/{messageId} {
-      allow get: if request.auth != null &&
-        (resource == null || resource.data.to == request.auth.uid || resource.data.from == request.auth.uid);
+      allow get: if isAdmin() || (request.auth != null &&
+        (resource == null || resource.data.to == request.auth.uid || resource.data.from == request.auth.uid));
       allow list: if request.auth != null &&
         (resource.data.to == request.auth.uid || resource.data.from == request.auth.uid);
       // Direct messages: 16+ only, and only to someone who has you as a friend
@@ -188,8 +215,8 @@ service cloud.firestore {
                     && !hasBlocked(request.resource.data.to, request.auth.uid)
                     && request.auth.uid in get(/databases/$(database)/documents/users/$(request.resource.data.to)).data.get('friends', []);
       allow update: if request.auth != null && resource.data.to == request.auth.uid;
-      allow delete: if request.auth != null &&
-        (resource.data.to == request.auth.uid || resource.data.from == request.auth.uid);
+      allow delete: if isAdmin() || (request.auth != null &&
+        (resource.data.to == request.auth.uid || resource.data.from == request.auth.uid));
     }
 
     // Writing groups (group chat and group word counts). Only members can see
@@ -224,7 +251,7 @@ service cloud.firestore {
       // always find their own (so account deletion can remove them); the
       // sender or the group's creator can delete.
       match /messages/{messageId} {
-        allow read: if request.auth != null
+        allow read: if isAdmin() || request.auth != null
                     && (resource.data.from == request.auth.uid
                         || request.auth.uid in get(/databases/$(database)/documents/groups/$(groupId)).data.members);
         allow create: if request.auth != null
@@ -233,14 +260,14 @@ service cloud.firestore {
                       && request.resource.data.body is string
                       && request.resource.data.body.size() <= 500
                       && request.auth.uid in get(/databases/$(database)/documents/groups/$(groupId)).data.members;
-        allow delete: if request.auth != null
+        allow delete: if isAdmin() || request.auth != null
                       && (resource.data.from == request.auth.uid
                           || get(/databases/$(database)/documents/groups/$(groupId)).data.ownerId == request.auth.uid);
       }
     }
 
     match /shares/{shareId} {
-      allow get: if request.auth != null &&
+      allow get: if isAdmin() || request.auth != null &&
         (resource == null || resource.data.ownerId == request.auth.uid || request.auth.uid in resource.data.sharedWith);
       allow list: if request.auth != null &&
         (resource.data.ownerId == request.auth.uid || request.auth.uid in resource.data.sharedWith);
@@ -253,8 +280,8 @@ service cloud.firestore {
                     && request.resource.data.ownerId == request.auth.uid
                     && (socialOk(request.auth.uid)
                         || resource.data.get('sharedWith', []).toSet().hasAll(request.resource.data.get('sharedWith', [])));
-      allow delete: if request.auth != null &&
-        (resource.data.ownerId == request.auth.uid || request.auth.uid in resource.data.sharedWith);
+      allow delete: if isAdmin() || (request.auth != null &&
+        (resource.data.ownerId == request.auth.uid || request.auth.uid in resource.data.sharedWith));
     }
 
     // Deny everything else by default.
