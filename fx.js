@@ -109,6 +109,7 @@
     function attach(el, n) {
         const s = SHEETS[n - 1];
         if (!el || !s) return null;
+        if (el._dpBoss) el._dpBoss.stop();   // re-used element (pop-ups): one animation at a time
         el.style.backgroundImage = `url(bosses-anim/boss${n}.webp)`;
         el.style.backgroundSize = `${s.cols * 100}% 300%`;
         let row = 0, frame = 0, count = s.idle, onDone = null, timer = null;
@@ -130,9 +131,10 @@
         }
         draw();
         if (!reduced) timer = setInterval(tick, 110);
-        return {
+        return el._dpBoss = {
             hurt() { if (reduced || !s.hurt) return; play(1, s.hurt, () => play(0, s.idle)); },
-            die(cb) { if (reduced || !s.die) { if (cb) cb(); return; } play(2, s.die, () => { if (cb) cb(); }); },
+            // Plays the death once and holds on the last frame
+            die(cb) { if (reduced || !s.die) { if (cb) cb(); return; } play(2, s.die, () => { clearInterval(timer); if (cb) cb(); }); },
             stop() { clearInterval(timer); }
         };
     }

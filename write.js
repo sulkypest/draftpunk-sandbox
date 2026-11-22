@@ -233,9 +233,9 @@ function syncChaptersToTracker(ids) {
     if (ev.streak)  queueToast(null, `🔥 ${ev.streak.days}-DAY STREAK`, `+${ev.streak.bonus} BONUS XP`);
     if (sev) streakToasts(sev).forEach(t => queueToast(null, t[0], t[1]));
     if (ev.session) queueToast(null, ev.session.label, `+${ev.session.bonus} BONUS XP`);
-    if (ev.beat)    queueToast(window.getBossImgSrc ? window.getBossImgSrc(ev.beat.idx + 1) : null, 'BEAT DEFEATED', ev.beat.name.toUpperCase());
+    if (ev.beat)    queueToast(window.DPBossSprite ? DPBossSprite.still(ev.beat.idx + 1) : null, 'BEAT DEFEATED', ev.beat.name.toUpperCase());
     ev.buddies.forEach(f => queueToast(`buddies/${f}`, 'NEW BUDDY!', 'CHECK YOUR COLLECTION'));
-    if (ev.minion)  queueToast(null, `${ev.minion.emoji} FOE VANQUISHED`, ev.minion.name.toUpperCase());
+    if (ev.minion)  queueToast(`stagemap/minion${ev.minion.idx + 1}.png`, 'FOE VANQUISHED', ev.minion.name.toUpperCase());
     if (ev.levelUp) queueToast(`shields/${Math.min(5, Math.ceil(ev.levelUp.level / 5))}.png`, `LEVEL ${ev.levelUp.level}!`, ev.levelUp.rank.toUpperCase());
     // Comic pop-ups for the big moments. The writer has just chosen to sync,
     // so this is a pause in the writing rather than an interruption.

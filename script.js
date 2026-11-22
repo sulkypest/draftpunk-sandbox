@@ -234,7 +234,7 @@ function showCombatToast(label, name, emoji, taunt, spriteUrl) {
     const toast = document.createElement('div');
     toast.className = 'combat-toast';
     const iconHtml = spriteUrl
-        ? `<img src="${spriteUrl}" style="height:40px;width:auto;image-rendering:pixelated;display:block;flex-shrink:0;">`
+        ? `<img src="${spriteUrl}" style="height:40px;width:auto;image-rendering:${/stagemap\/|bosses-anim\//.test(spriteUrl) ? 'auto' : 'pixelated'};display:block;flex-shrink:0;">`
         : (emoji ? `<span class="toast-emoji">${emoji}</span>` : '');
     toast.innerHTML = `
         <div class="toast-label">${label}</div>
@@ -267,7 +267,8 @@ window.addWords = function() {
     // ── Boss beat defeated ────────────────────────────────────────────────────
     if (ev.beat) {
         document.getElementById('bossBeatTitle').innerText = ev.beat.name;
-        document.getElementById('defeatedBossSprite').src = window.getBossImgSrc(ev.beat.idx + 1);
+        const deadEl = document.getElementById('defeatedBossSprite');
+        if (deadEl && window.DPBossSprite) { const c = DPBossSprite.attach(deadEl, ev.beat.idx + 1); if (c) setTimeout(() => c.die(), 350); }
         document.getElementById('levelOverlay').style.display = 'flex';
         if (window.SFX) SFX.bossDefeated();
         const app = document.querySelector('.app');
@@ -314,9 +315,8 @@ window.addWords = function() {
     if (ev.minion) {
         const labels = ['HENCHMAN DEFEATED', 'MINION SUBDUED', 'FOE VANQUISHED', 'OBSTACLE CRUSHED'];
         const label  = labels[ev.minion.idx % labels.length];
-        const mKey   = 'MonsterV' + (ev.minion.idx + 1);
-        const mData  = window.gameManifest && window.gameManifest.monsters[mKey];
-        const mSprite = mData && mData.Idle && mData.Idle[0] ? mData.Idle[0] : null;
+        // Same art as the minion on the stage map
+        const mSprite = `stagemap/minion${ev.minion.idx + 1}.png`;
         showCombatToast(label, ev.minion.name, ev.minion.emoji, ev.minion.taunt, mSprite);
         if (window.SFX) SFX.minionDefeated();
     }
@@ -780,7 +780,7 @@ window.showBossZoom = function() {
     const curBeatIdx = BOSS_BEATS.findLastIndex(b => progress >= b.pct);
     const nextBeat   = BOSS_BEATS[curBeatIdx + 1] || BOSS_BEATS[curBeatIdx];
     const wordsNeeded = Math.ceil((nextBeat.pct / 100) * state.goal) - state.total;
-    document.getElementById('bossZoomSprite').src = window.getBossImgSrc(curBeatIdx + 2);
+    if (window.DPBossSprite) DPBossSprite.attach(document.getElementById('bossZoomSprite'), Math.min(BOSS_BEATS.length, curBeatIdx + 2));
     document.getElementById('bossZoomName').innerText = `STAGE ${curBeatIdx + 2} — ${nextBeat.name.toUpperCase()}`;
     document.getElementById('bossZoomBeat').innerText = wordsNeeded > 0
         ? `${wordsNeeded.toLocaleString()} WORDS TO DEFEAT`

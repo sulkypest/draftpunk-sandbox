@@ -382,7 +382,7 @@
     <div id="levelOverlay" class="overlay" onclick="closeOverlay()">
         <div class="congrats-circle poster poster-ink">
             <h2 class="poster-head poster-head-red">BOSS BEAT DEFEATED!</h2>
-            <img id="defeatedBossSprite" src="" style="width:110px;height:110px;image-rendering:pixelated;object-fit:contain;display:block;margin:8px auto;filter:drop-shadow(0 0 10px var(--neon));">
+            <span id="defeatedBossSprite" class="sm-boss-sprite dp-boss-pop" style="width:110px;height:110px;margin:8px auto;" role="img" aria-label="Boss"></span>
             <div id="bossBeatTitle" style="font-size:1.3rem;font-weight:900;color:var(--text);margin:8px 0 4px;"></div>
             <div style="font-size:0.75rem;color:var(--text-dim);letter-spacing:1px;">CLICK TO CONTINUE</div>
         </div>
@@ -437,7 +437,7 @@
     <div id="bossZoomOverlay" class="overlay" onclick="closeBossZoom()">
         <div class="congrats-circle">
             <div style="font-size:0.75rem;letter-spacing:3px;color:var(--text-dim);margin-bottom:6px;">BOSS INTEL</div>
-            <img id="bossZoomSprite" src="" style="width:130px;height:130px;image-rendering:pixelated;object-fit:contain;filter:drop-shadow(0 0 12px var(--neon));display:block;margin:0 auto;">
+            <span id="bossZoomSprite" class="sm-boss-sprite dp-boss-pop" style="width:130px;height:130px;margin:8px auto;" role="img" aria-label="Boss"></span>
             <div id="bossZoomName" style="font-size:1rem;font-weight:900;color:var(--neon);margin:8px 0 4px;letter-spacing:2px;"></div>
             <div id="bossZoomBeat" style="font-size:0.75rem;letter-spacing:1px;color:var(--neon);color:var(--text-dim);margin-bottom:6px;"></div>
             <div id="bossZoomLore" style="font-size:0.75rem;line-height:1.5;"></div>
