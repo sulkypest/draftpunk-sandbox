@@ -291,6 +291,7 @@ window.addWords = function() {
         sprite.classList.add('hit-shake');
     }
     if (window.SFX) SFX.bossHit();
+    if (window._dpBoss && !ev.beat) setTimeout(() => window._dpBoss && window._dpBoss.hurt(), 50);
 
     // 1–3% chance of floating damage number
     if (Math.random() < (0.01 + Math.random() * 0.02)) showDamageNumber(val);
@@ -493,6 +494,8 @@ function updateUI() {
 // where the writer is, and a small strip of the bosses already defeated.
 // Display only: reads state, never changes or saves it.
 const SM_X = '<svg class="sm-x" aria-hidden="true" viewBox="0 0 100 100" fill="none" stroke-linecap="square"><path class="sm-x-under" d="M14 14L86 86M86 14L14 86"/><path class="sm-x-over" d="M14 14L86 86M86 14L14 86"/></svg>';
+// Stage-map boss art: animated sheets in bosses-anim/ (falls back to the old stills)
+function bossStill(n) { return window.DPBossSprite ? DPBossSprite.still(n) : `stagemap/boss${n}.png`; }
 function smPos(f) { return `calc(var(--sm-pad) + (100% - 2 * var(--sm-pad)) * ${Math.max(0, Math.min(1, f)).toFixed(4)})`; }
 function renderStageMap(progress, curIdx) {
     const track = document.getElementById('smTrack');
@@ -527,7 +530,7 @@ function renderStageMap(progress, curIdx) {
 
     // Left end: the boss beaten to open this stage (or the start line)
     if (leftIdx >= 0) {
-        html += `<div class="sm-node sm-boss-node sm-defeated-node sm-left-boss" style="left:${smPos(0)}"><img src="stagemap/boss${leftIdx + 1}.png" alt="${BOSS_BEATS[leftIdx].name}, defeated">${SM_X}</div>`;
+        html += `<div class="sm-node sm-boss-node sm-defeated-node sm-left-boss" style="left:${smPos(0)}"><img src="${bossStill(leftIdx + 1)}" alt="${BOSS_BEATS[leftIdx].name}, defeated">${SM_X}</div>`;
         html += `<div class="sm-tag sm-tag-boss" style="left:${smPos(0)}">${BOSS_BEATS[leftIdx].name.toUpperCase()}<br><span>${fmt(words(p0))}</span></div>`;
     } else {
         html += `<div class="sm-node sm-start" style="left:${smPos(0)}"></div>`;
@@ -548,9 +551,9 @@ function renderStageMap(progress, curIdx) {
     // Right end: the boss that closes this stage
     const rightBeaten = done(p1);
     if (rightBeaten) {
-        html += `<div class="sm-node sm-boss-node sm-defeated-node sm-right-boss" style="left:${smPos(1)}"><img src="stagemap/boss${rightIdx + 1}.png" alt="${BOSS_BEATS[rightIdx].name}, defeated">${SM_X}</div>`;
+        html += `<div class="sm-node sm-boss-node sm-defeated-node sm-right-boss" style="left:${smPos(1)}"><img src="${bossStill(rightIdx + 1)}" alt="${BOSS_BEATS[rightIdx].name}, defeated">${SM_X}</div>`;
     } else {
-        html += `<button type="button" class="sm-node sm-boss-node sm-boss-next" style="left:${smPos(1)}" onclick="showBossZoom()" aria-label="${BOSS_BEATS[rightIdx].name}: boss info"><img id="bossSprite" src="stagemap/boss${rightIdx + 1}.png" alt=""></button>`;
+        html += `<button type="button" class="sm-node sm-boss-node sm-boss-next" style="left:${smPos(1)}" onclick="showBossZoom()" aria-label="${BOSS_BEATS[rightIdx].name}: boss info"><span id="bossSprite" class="sm-boss-sprite" data-boss="${rightIdx + 1}"></span></button>`;
     }
     html += `<div class="sm-tag sm-tag-boss sm-tag-next" style="left:${smPos(1)}">${BOSS_BEATS[rightIdx].name.toUpperCase()}<br><span>${fmt(words(p1))}</span></div>`;
 
@@ -560,6 +563,8 @@ function renderStageMap(progress, curIdx) {
         html += `<div class="sm-you" style="left:${smPos(you)}"><span class="sm-you-tag">YOU</span><span class="sm-you-stem"></span></div>`;
     }
     track.innerHTML = html;
+    const spriteEl = track.querySelector('.sm-boss-sprite');
+    window._dpBoss = (spriteEl && window.DPBossSprite) ? DPBossSprite.attach(spriteEl, rightIdx + 1) : null;
 
     // The boss gets restless in the last stretch: the final 500 words, or the
     // last quarter of a short stage
@@ -580,7 +585,7 @@ function renderStageMap(progress, curIdx) {
     } else {
         nextBox.style.display = '';
         const toGo = nextMinion ? words(nextMinion.m.pct) - state.total : words(p1) - state.total;
-        document.getElementById('smNextSprite').src = nextMinion ? `stagemap/minion${nextMinion.i + 1}.png` : `stagemap/boss${rightIdx + 1}.png`;
+        document.getElementById('smNextSprite').src = nextMinion ? `stagemap/minion${nextMinion.i + 1}.png` : bossStill(rightIdx + 1);
         document.getElementById('smNextName').textContent = (nextMinion ? nextMinion.m.name : BOSS_BEATS[rightIdx].name).toUpperCase();
         document.getElementById('smNextToGo').textContent = fmt(Math.max(0, toGo));
     }
@@ -593,7 +598,7 @@ function renderStageMap(progress, curIdx) {
     strip.style.display = beatenCount ? '' : 'none';
     document.getElementById('smDefeatedLabel').textContent = `DEFEATED ${beatenCount}/${BOSS_BEATS.length}`;
     document.getElementById('smDefeatedList').innerHTML = BOSS_BEATS.slice(0, beatenCount).map((b, i) =>
-        `<span class="sm-mini" title="${b.name}"><img src="stagemap/boss${i + 1}.png" alt="${b.name}">${SM_X}</span>`
+        `<span class="sm-mini" title="${b.name}"><img src="${bossStill(i + 1)}" alt="${b.name}">${SM_X}</span>`
     ).join('');
 
     // Threshold ticks on the total progress bar
@@ -733,6 +738,7 @@ function dashReplay(fromTotal, opts) {
     if (fx && finalFell && opts.bossComic) setTimeout(() => fx.comic(fx.WORDS.victory, { tone: 'red' }), dur + 150);
     setTimeout(() => {
         if (track.isConnected) showDamageNumber(toTotal - fromTotal);
+        if (window._dpBoss) window._dpBoss.hurt();
     }, Math.max(0, dur - 250));
 
     // 3. Tidy up so later redraws behave normally

@@ -95,3 +95,46 @@
 
     root.DPFx = { comic: comic, countUp: countUp, reduced: reduced, WORDS: WORDS, minionWord: minionWord };
 })(window);
+
+// ── Animated stage-map bosses ────────────────────────────────────────────────
+// Each bosses-anim/bossN.webp is a sheet of 256px frames: row 1 idle loop,
+// row 2 hurt, row 3 die. Frame counts per boss are below (same order as the
+// 15 story beats). Display only.
+(function (root) {
+    'use strict';
+    const SHEETS = [{"cols":6,"idle":6,"hurt":2,"die":0},{"cols":6,"idle":6,"hurt":2,"die":3},{"cols":6,"idle":6,"hurt":2,"die":3},{"cols":6,"idle":6,"hurt":2,"die":3},{"cols":6,"idle":6,"hurt":2,"die":3},{"cols":6,"idle":6,"hurt":2,"die":2},{"cols":6,"idle":6,"hurt":2,"die":3},{"cols":10,"idle":10,"hurt":3,"die":4},{"cols":10,"idle":10,"hurt":3,"die":4},{"cols":6,"idle":6,"hurt":2,"die":3},{"cols":10,"idle":10,"hurt":2,"die":3},{"cols":10,"idle":10,"hurt":3,"die":4},{"cols":10,"idle":10,"hurt":3,"die":4},{"cols":6,"idle":6,"hurt":2,"die":3},{"cols":10,"idle":10,"hurt":3,"die":4}];
+    const still = n => `bosses-anim/boss${n}-still.webp`;
+
+    // n: 1-based boss number. Returns a controller with hurt() and die().
+    function attach(el, n) {
+        const s = SHEETS[n - 1];
+        if (!el || !s) return null;
+        el.style.backgroundImage = `url(bosses-anim/boss${n}.webp)`;
+        el.style.backgroundSize = `${s.cols * 100}% 300%`;
+        let row = 0, frame = 0, count = s.idle, onDone = null, timer = null;
+        const reduced = root.DPFx && root.DPFx.reduced();
+        function draw() {
+            const x = s.cols > 1 ? (frame / (s.cols - 1)) * 100 : 0;
+            el.style.backgroundPosition = `${x}% ${row * 50}%`;
+        }
+        function play(r, c, done) { row = r; count = Math.max(1, c); frame = 0; onDone = done || null; draw(); }
+        function tick() {
+            if (!el.isConnected) { clearInterval(timer); return; }
+            if (document.hidden) return;
+            frame++;
+            if (frame >= count) {
+                if (onDone) { const d = onDone; onDone = null; frame = count - 1; draw(); d(); return; }
+                frame = 0;
+            }
+            draw();
+        }
+        draw();
+        if (!reduced) timer = setInterval(tick, 110);
+        return {
+            hurt() { if (reduced || !s.hurt) return; play(1, s.hurt, () => play(0, s.idle)); },
+            die(cb) { if (reduced || !s.die) { if (cb) cb(); return; } play(2, s.die, () => { if (cb) cb(); }); },
+            stop() { clearInterval(timer); }
+        };
+    }
+    root.DPBossSprite = { attach: attach, still: still, count: SHEETS.length };
+})(window);
