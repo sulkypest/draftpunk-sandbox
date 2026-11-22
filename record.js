@@ -279,7 +279,7 @@
                 <div class="record-muted">RECORD CODE</div>
                 <div class="record-code-big">${esc(code)}</div>
                 <label class="record-muted" for="recStatement">FOR A SUBMISSION: copy this into your entry form, email or cover letter</label>
-                <textarea id="recStatement" readonly rows="2">${esc(statement)}</textarea>
+                <textarea id="recStatement" readonly rows="3">${esc(statement)}</textarea>
                 <div class="record-share-btns">
                     <button id="recCopyStatement">COPY FOR A SUBMISSION</button>
                     <a class="record-open-shared" href="${esc(url)}" target="_blank" rel="noopener">OPEN THE SHARED RECORD ↗</a>
