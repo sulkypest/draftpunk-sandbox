@@ -276,6 +276,11 @@
         <div class="app">
             <h1 id="wipDisplay">PROJECT</h1>
             <h2 id="lvlName">LEVEL</h2>
+            <div class="wc-display">
+                <div class="wc-display-number" id="wcMain">0</div>
+                <div class="wc-display-label">WORDS WRITTEN</div>
+                <div class="wc-display-gain" id="wcGain" aria-live="polite"></div>
+            </div>
 
             <section class="stage-map" aria-label="Stage map">
                 <div class="sm-head"><span>STAGE MAP</span><span id="smRange"></span></div>
@@ -300,28 +305,8 @@
                 </div>
             </section>
 
-            <button class="intel-btn" onclick="toggleIntel()">MICROBEAT TIPS ▾</button>
-            <div id="intelContainer" class="hidden">
-                <div id="loreBox" class="lore-container"></div>
-                <div id="tipsBox" class="tips-container"></div>
-            </div>
 
-            <div class="chart-shield">
-                <canvas id="velocityChart"></canvas>
-            </div>
 
-            <div class="wc-display">
-                <div class="wc-display-number" id="wcMain">0</div>
-                <div class="wc-display-label">WORDS WRITTEN</div>
-            </div>
-
-            <span class="bar-label">TOTAL PROGRESS</span>
-            <div class="bar-container">
-                <div id="hpBar" class="bar-fill"></div>
-                <div class="sm-ticks" id="progressTicks" aria-hidden="true"></div>
-            </div>
-            <div id="hpText">0 / 0</div>
-            <div class="sm-legend" aria-hidden="true"><span><i class="sm-key sm-key-boss"></i>BOSS</span><span><i class="sm-key"></i>MINION</span></div>
 
             <div class="input-zone">
                 <input type="number" id="wordIn" placeholder="WORDS">
@@ -329,6 +314,22 @@
                 <button class="btn-secondary" onclick="showCorrectWords()" >CORRECT</button>
                 <button onclick="showGrenade()" style="background:var(--signal-red);color:#ffffff;">GRENADE</button>
             </div>
+            <span class="bar-label">TOTAL PROGRESS</span>
+            <div class="bar-container">
+                <div id="hpBar" class="bar-fill"></div>
+                <div class="sm-ticks" id="progressTicks" aria-hidden="true"></div>
+            </div>
+            <div id="hpText">0 / 0</div>
+            <div class="sm-legend" aria-hidden="true"><span><i class="sm-key sm-key-boss"></i>BOSS</span><span><i class="sm-key"></i>MINION</span></div>
+            <button class="intel-btn" onclick="toggleIntel()">MICROBEAT TIPS ▾</button>
+            <div id="intelContainer" class="hidden">
+                <div id="loreBox" class="lore-container"></div>
+                <div id="tipsBox" class="tips-container"></div>
+            </div>
+            <div class="chart-shield">
+                <canvas id="velocityChart"></canvas>
+            </div>
+
 
             <div id="dashSignInPrompt" style="display:none;border:2px solid var(--neon);padding:12px;margin-bottom:12px;text-align:center;">
                 <div style="font-size:0.75rem;color:var(--text-dim);letter-spacing:1px;margin-bottom:8px;">NOT SYNCING — DATA IS LOCAL ONLY</div>
@@ -485,6 +486,7 @@
     <script src="buddy-data.js"></script>
     <script src="tracker.js"></script>
     <script src="backup.js"></script>
+    <script src="fx.js"></script>
     <script src="script.js"></script>
     <script src="data-merge.js"></script>
     <script type="module" src="sync.js"></script>
