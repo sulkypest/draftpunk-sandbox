@@ -105,7 +105,9 @@
 // Display only.
 (function (root) {
     'use strict';
-    const SHEETS = [{"cols":6,"idle":6,"hurt":2,"die":0},{"cols":6,"idle":6,"hurt":2,"die":3},{"cols":6,"idle":6,"hurt":2,"die":3},{"cols":6,"idle":6,"hurt":2,"die":3},{"cols":6,"idle":6,"hurt":2,"die":3},{"cols":6,"idle":6,"hurt":2,"die":2},{"cols":6,"idle":6,"hurt":2,"die":3},{"cols":10,"idle":10,"hurt":3,"die":4},{"cols":10,"idle":10,"hurt":3,"die":4},{"cols":6,"idle":6,"hurt":2,"die":3},{"cols":10,"idle":10,"hurt":2,"die":3},{"cols":10,"idle":10,"hurt":3,"die":4},{"cols":10,"idle":10,"hurt":3,"die":4},{"cols":6,"idle":6,"hurt":2,"die":3},{"cols":10,"idle":10,"hurt":3,"die":4}];
+    const SHEETS = [{"cols":6,"idle":6,"hurt":2,"die":0},{"cols":6,"idle":6,"hurt":2,"die":3},{"cols":6,"idle":6,"hurt":2,"die":3},{"cols":6,"idle":6,"hurt":2,"die":3},{"cols":6,"idle":6,"hurt":2,"die":3},{"cols":6,"idle":6,"hurt":2,"die":2},{"cols":6,"idle":6,"hurt":2,"die":3},{"cols":10,"idle":10,"hurt":3,"die":4},{"cols":10,"idle":10,"hurt":3,"die":4},{"cols":6,"idle":6,"hurt":2,"die":3},{"cols":10,"idle":10,"hurt":2,"die":3},{"cols":10,"idle":10,"hurt":3,"die":4},{"cols":10,"idle":10,"hurt":3,"die":4},{"cols":6,"idle":6,"hurt":2,"die":3},{"cols":10,"idle":10,"hurt":3,"die":4},{"cols":6,"idle":6,"hurt":2,"die":3},{"cols":6,"idle":6,"hurt":2,"die":3}];
+    // 16-17: competition bosses (launch: mossy golem halfway, horned demon final).
+    // Not on the main stage map, which uses 1-15 only.
     const CELL_W = 614, CELL_H = 333, SQ = 256, SQ_X = 179;
     // Images are cached hard by the service worker (cache-first), so the
     // version goes in the URL: bump ART_V whenever the boss art changes.

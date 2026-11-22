@@ -4,3 +4,6 @@ land monster, 2D fantasy ghosts, elemental spirits chibi, 2D fantasy trolls,
 2D fantasy cyclops, 2D fantasy orc, 2D fantasy skeletons, 2D fantasy elemental,
 2D fantasy necromancer, 2D fantasy golems, demon of darkness chibi,
 2D fantasy demon. Rows in each sheet: idle, hurt, die (256px frames).
+
+Competition bosses: boss16 = Golem_2 (Craftpix free golems chibi), boss17 = Demons_of_Darkness_1
+(Craftpix demon of darkness chibi). Same sheet layout as 1-15.
