@@ -336,13 +336,17 @@
                 <button onclick="dpOpenSignIn()" style="width:100%;background:var(--neon);color:#000;font-weight:900;letter-spacing:2px;">⊕ SIGN IN TO SYNC</button>
             </div>
 
-            <div class="buddy-container">
-                <div style="width:100%;display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;">
+            <section class="buddy-container" aria-label="Buddies">
+                <div class="bd-head">
                     <span>BUDDIES</span>
-                    <div id="buddyCountDisplay" style="font-size:1.5rem;">0</div>
+                    <span class="bd-count"><b id="buddyCountDisplay">0</b> / <span id="buddyTotal">100</span></span>
                 </div>
-                <div id="buddyGallery" style="display:flex;flex-wrap:wrap;gap:10px;"></div>
-            </div>
+                <div class="bd-progress" aria-hidden="true"><i id="buddyProgress"></i></div>
+                <div class="bd-label" id="buddyRecentLabel">LATEST FINDS</div>
+                <div id="buddyGallery" class="bd-recent"></div>
+                <button type="button" class="bd-toggle" id="buddyBinderBtn" onclick="toggleBuddyBinder()" aria-expanded="false">OPEN BINDER ▾</button>
+                <ul id="buddyBinder" class="bd-binder" hidden></ul>
+            </section>
             <button class="install-btn hidden" onclick="installApp()" style="margin-top:20px;">+ ADD TO HOME SCREEN</button>
             <div style="display:flex;gap:10px;margin-top:10px;">
                 <button class="btn-secondary" onclick="showProjectSettings()" style="flex:1;font-size:0.75rem;">EDIT PROJECT</button>
