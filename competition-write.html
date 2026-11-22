@@ -85,11 +85,10 @@
             m.update(w, animate);
             let line;
             if (w < B.min) line = `<strong>${w.toLocaleString()}</strong> words · ${(B.min - w).toLocaleString()} to go to ${B.min.toLocaleString()}`;
-            else if (w <= B.max) line = `<strong>${w.toLocaleString()}</strong> words · inside the band (${B.min.toLocaleString()}–${B.max.toLocaleString()})`;
-            else line = `<strong>${w.toLocaleString()}</strong> words · <span class="warn">${(w - B.max).toLocaleString()} over ${B.max.toLocaleString()}: trim to submit</span>`;
-            if (w >= B.cap) line += `<br><span class="warn">That's the limit for this story: ${B.cap.toLocaleString()} words.</span>`;
+            else if (w < B.cap) line = `<strong>${w.toLocaleString()}</strong> words · ready to submit`;
+            else line = `<strong>${w.toLocaleString()}</strong> words · that's the limit for this story`;
             countEl.innerHTML = line;
-            sub.disabled = !!st.submittedAt || w < B.min || w > B.max;
+            sub.disabled = !!st.submittedAt || w < B.min || w > B.cap;
             if (st.submittedAt) sub.textContent = 'ENTERED';
             return w;
         }
@@ -129,7 +128,7 @@
             const o = overlay(`
                 <h2>Submit your entry</h2>
                 <ul class="cw-check">
-                    <li><b>✓</b>${w.toLocaleString()} words, inside the ${B.min.toLocaleString()}–${B.max.toLocaleString()} band</li>
+                    <li><b>✓</b>${w.toLocaleString()} words (${B.min.toLocaleString()}–${B.max.toLocaleString()}, with up to 50 over allowed)</li>
                     <li><b>✓</b>Started after the competition opened</li>
                     <li><b>✓</b>Age confirmed: 18 or over</li>
                     <li class="${pasted ? 'bad' : ''}"><b>${pasted ? '!' : '✓'}</b>${pasted ? `${pasted.toLocaleString()} words were pasted in. Judges see this in your Writing Record.` : 'Every word typed in Draft Punk'}</li>
@@ -170,7 +169,7 @@
                     <div class="cp-sprite${b.frames === 6 ? ' f6' : ''}" style="background-image:url(competition-buddies/${b.img}.png)"></div>
                     <p class="cp-bname">${b.name}</p><p class="cp-how">${b.fact}</p>
                 </div>
-                <p class="cw-record">You've beaten the final boss. Your story can be submitted any time before the competition closes, as long as it's no more than ${B.max.toLocaleString()} words.</p>
+                <p class="cw-record">You've beaten the final boss. Your story can be submitted any time before the competition closes, up to ${B.cap.toLocaleString()} words.</p>
                 <button type="button" class="dp-acct-btn" id="cwOk">KEEP WRITING</button>`);
             o.querySelector('#cwOk').onclick = () => { o.remove(); ed.focus(); };
         }

@@ -92,7 +92,7 @@
             <h2 id="cpRulesHead">THE ESSENTIALS</h2>
             <ul class="cp-rules">
                 <li>Write your story in Draft Punk, between the opening and closing times.</li>
-                <li>Between 800 and 1,000 words.</li>
+                <li>Between 800 and 1,000 words. Up to 50 over is fine.</li>
                 <li>You keep the copyright. Winning stories are published on Draft Punk.</li>
             </ul>
         </section>
@@ -138,7 +138,7 @@
             const w = st.words || 0;
             C.map(document.getElementById('cpMap')).update(w, false);
             document.getElementById('cpWords').textContent = w.toLocaleString();
-            document.getElementById('cpToGo').textContent = w >= C.BAND.min ? `Inside the band: ${C.BAND.min.toLocaleString()}–${C.BAND.max.toLocaleString()}` : `${(C.BAND.min - w).toLocaleString()} to go to reach ${C.BAND.min.toLocaleString()}`;
+            document.getElementById('cpToGo').textContent = w >= C.BAND.min ? `Ready to submit` : `${(C.BAND.min - w).toLocaleString()} to go to reach ${C.BAND.min.toLocaleString()}`;
             const go = document.getElementById('cpGo');
             if (st.submittedAt) {
                 document.getElementById('cpEntered').innerHTML = `<div class="cp-entered"><strong>ENTERED · ${st.code}</strong>Submitted ${new Date(st.submittedAt).toLocaleString('en-GB', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })}. The judges have the version you submitted; your own copy stays yours to keep and edit.</div>`;
