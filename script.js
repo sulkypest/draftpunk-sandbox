@@ -268,7 +268,7 @@ window.addWords = function() {
     if (ev.beat) {
         document.getElementById('bossBeatTitle').innerText = ev.beat.name;
         const deadEl = document.getElementById('defeatedBossSprite');
-        if (deadEl && window.DPBossSprite) { const c = DPBossSprite.attach(deadEl, ev.beat.idx + 1); if (c) setTimeout(() => c.die(), 350); }
+        if (deadEl && window.DPBossSprite) { const c = DPBossSprite.attach(deadEl, ev.beat.idx + 1, { full: true }); if (c) setTimeout(() => c.die(), 350); }
         document.getElementById('levelOverlay').style.display = 'flex';
         if (window.SFX) SFX.bossDefeated();
         const app = document.querySelector('.app');

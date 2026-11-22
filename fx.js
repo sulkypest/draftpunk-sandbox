@@ -97,26 +97,36 @@
 })(window);
 
 // ── Animated stage-map bosses ────────────────────────────────────────────────
-// Each bosses-anim/bossN.webp is a sheet of 256px frames: row 1 idle loop,
-// row 2 hurt, row 3 die. Frame counts per boss are below (same order as the
-// 15 story beats). Display only.
+// Each bosses-anim/bossN.webp is a sheet of cells, one row each for idle,
+// hurt and die. Every cell is drawn at the SAME scale, so a boss never
+// changes size between idling, flinching and falling. A cell is 614x333px:
+// the standing boss fills the 256x256 square starting 179px in from the left;
+// the extra room either side and below is for the death fall.
+// Display only.
 (function (root) {
     'use strict';
     const SHEETS = [{"cols":6,"idle":6,"hurt":2,"die":0},{"cols":6,"idle":6,"hurt":2,"die":3},{"cols":6,"idle":6,"hurt":2,"die":3},{"cols":6,"idle":6,"hurt":2,"die":3},{"cols":6,"idle":6,"hurt":2,"die":3},{"cols":6,"idle":6,"hurt":2,"die":2},{"cols":6,"idle":6,"hurt":2,"die":3},{"cols":10,"idle":10,"hurt":3,"die":4},{"cols":10,"idle":10,"hurt":3,"die":4},{"cols":6,"idle":6,"hurt":2,"die":3},{"cols":10,"idle":10,"hurt":2,"die":3},{"cols":10,"idle":10,"hurt":3,"die":4},{"cols":10,"idle":10,"hurt":3,"die":4},{"cols":6,"idle":6,"hurt":2,"die":3},{"cols":10,"idle":10,"hurt":3,"die":4}];
+    const CELL_W = 614, CELL_H = 333, SQ = 256, SQ_X = 179;
     const still = n => `bosses-anim/boss${n}-still.webp`;
 
-    // n: 1-based boss number. Returns a controller with hurt() and die().
-    function attach(el, n) {
+    // n: 1-based boss number.
+    // opts.full: show the whole cell (room for the death fall; element should
+    //   be 614:333 in shape). Otherwise the element is a square showing just
+    //   the standing boss, as on the stage map.
+    function attach(el, n, opts) {
         const s = SHEETS[n - 1];
         if (!el || !s) return null;
         if (el._dpBoss) el._dpBoss.stop();   // re-used element (pop-ups): one animation at a time
+        const full = !!(opts && opts.full);
         el.style.backgroundImage = `url(bosses-anim/boss${n}.webp)`;
-        el.style.backgroundSize = `${s.cols * 100}% 300%`;
+        el.style.backgroundRepeat = 'no-repeat';
         let row = 0, frame = 0, count = s.idle, onDone = null, timer = null;
         const reduced = root.DPFx && root.DPFx.reduced();
         function draw() {
-            const x = s.cols > 1 ? (frame / (s.cols - 1)) * 100 : 0;
-            el.style.backgroundPosition = `${x}% ${row * 50}%`;
+            const k = (el.clientWidth || (full ? CELL_W : SQ)) / (full ? CELL_W : SQ);
+            el.style.backgroundSize = `${s.cols * CELL_W * k}px ${3 * CELL_H * k}px`;
+            const x = (frame * CELL_W + (full ? 0 : SQ_X)) * k;
+            el.style.backgroundPosition = `${-x}px ${-row * CELL_H * k}px`;
         }
         function play(r, c, done) { row = r; count = Math.max(1, c); frame = 0; onDone = done || null; draw(); }
         function tick() {
@@ -130,6 +140,7 @@
             draw();
         }
         draw();
+        requestAnimationFrame(draw);   // re-measure once laid out (pop-ups open hidden)
         if (!reduced) timer = setInterval(tick, 110);
         return el._dpBoss = {
             hurt() { if (reduced || !s.hurt) return; play(1, s.hurt, () => play(0, s.idle)); },
