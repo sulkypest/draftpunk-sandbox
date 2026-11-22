@@ -50,6 +50,13 @@
         .cp-tier { font-size: 0.65rem; letter-spacing: 2px; font-weight: 900; margin: 0 0 4px; }
         .cp-bname { font-size: 0.75rem; font-weight: 700; margin: 0 0 4px; }
         .cp-how { font-size: 0.65rem; color: var(--text-dim); line-height: 1.4; margin: 0; }
+        .cp-mystery { width: 96px; height: 96px; margin: 8px auto 12px; border: 2px dashed var(--border-mid); display: flex; align-items: center; justify-content: center; font-family: var(--font-display); font-size: 2.6rem; color: var(--text-dim); }
+        .cp-terms summary { cursor: pointer; list-style: none; display: flex; align-items: center; gap: 8px; }
+        .cp-terms summary::-webkit-details-marker { display: none; }
+        .cp-terms summary::after { content: '+'; font-weight: 900; color: var(--neon); }
+        .cp-terms[open] summary::after { content: '−'; }
+        .cp-terms summary h2 { margin: 0; }
+        .cp-terms-body { padding-top: 12px; font-size: 0.8rem; line-height: 1.6; }
         .cp-rules { font-size: 0.8rem; line-height: 1.7; padding-left: 18px; margin: 0; }
         @media (max-width: 560px) {
             .cp-facts { grid-template-columns: 1fr; }
@@ -142,12 +149,12 @@
         <section class="cp-sec" aria-labelledby="cpBuddiesHead">
             <h2 id="cpBuddiesHead">COMPETITION BUDDIES</h2>
             <div class="cp-buddies">
-                <div class="cp-buddy"><div class="cp-sprite f6" style="background-image:url(competition-buddies/duckling.png)"></div><p class="cp-tier">FINISHER</p><p class="cp-bname">Tiny Draft</p><p class="cp-how">Beat the final boss</p></div>
-                <div class="cp-buddy"><div class="cp-sprite locked" style="background-image:url(competition-buddies/hare.png)"></div><p class="cp-tier">ENTRANT</p><p class="cp-bname">Deadline Hopkins</p><p class="cp-how">Submit a valid entry</p></div>
-                <div class="cp-buddy"><div class="cp-sprite locked" style="background-image:url(competition-buddies/deer.png)"></div><p class="cp-tier">SHORTLISTED</p><p class="cp-bname">Doe Dénouement</p><p class="cp-how">Make the shortlist</p></div>
-                <div class="cp-buddy champion"><div class="cp-sprite locked" style="background-image:url(competition-buddies/fox.png)"></div><p class="cp-tier">CHAMPION</p><p class="cp-bname">Reynard Redraft</p><p class="cp-how">Win. Only one will ever exist</p></div>
+                <div class="cp-buddy"><div class="cp-sprite f6" style="background-image:url(competition-buddies/duckling.png)"></div><p class="cp-tier">FINISHER</p><p class="cp-bname">Tiny Draft</p><p class="cp-how">Earned: you beat the final boss</p></div>
+                <div class="cp-buddy"><div class="cp-mystery" aria-hidden="true">?</div><p class="cp-tier">ENTRANT</p><p class="cp-how">Submit a valid entry</p></div>
+                <div class="cp-buddy"><div class="cp-mystery" aria-hidden="true">?</div><p class="cp-tier">SHORTLISTED</p><p class="cp-how">Make the shortlist</p></div>
+                <div class="cp-buddy champion"><div class="cp-mystery" aria-hidden="true">?</div><p class="cp-tier">CHAMPION</p><p class="cp-how">Win. Only one will ever exist</p></div>
             </div>
-            <p class="cp-note">Competition buddies can't be earned once the competition closes. In this preview the Finisher is shown as earned and the rest as locked.</p>
+            <p class="cp-note">Each buddy stays hidden until you earn it, and none can be earned once the competition closes. In this preview the Finisher has been earned.</p>
         </section>
 
         <section class="cp-sec" aria-labelledby="cpRulesHead">
@@ -156,9 +163,24 @@
                 <li>Write your story in Draft Punk, between the opening and closing times.</li>
                 <li>Between 800 and 1,000 words.</li>
                 <li>You keep the copyright. Winning stories are published on Draft Punk.</li>
-                <li>Prize winners show ID before payment.</li>
-                <li><span class="cp-placeholder">Full competition rules: link to follow.</span></li>
             </ul>
+        </section>
+
+        <section class="cp-sec" aria-labelledby="cpTermsHead">
+            <details class="cp-terms">
+                <summary><h2 id="cpTermsHead">FULL TERMS AND CONDITIONS</h2></summary>
+                <div class="cp-terms-body">
+                    <p class="cp-placeholder">Full wording to be written and checked by your solicitor. It will cover:</p>
+                    <ul class="cp-rules">
+                        <li>Who can enter: writers aged 18 and over, one entry each</li>
+                        <li>How entries are written and submitted, and the word count</li>
+                        <li>Judging, and how the shortlist and winner are chosen</li>
+                        <li>Prizes, including ID checks before payment</li>
+                        <li>Copyright, and permission to publish winning stories</li>
+                        <li>Disqualification, including pasted or imported text</li>
+                    </ul>
+                </div>
+            </details>
         </section>
 
         <section class="cp-sec" aria-labelledby="cpPastHead">
