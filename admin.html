@@ -7,8 +7,8 @@
     <meta name="robots" content="noindex">
     <title>ADMIN — DRAFT PUNK</title>
     <link rel="icon" href="DRAFTPUNK.png" type="image/png">
-    <link rel="stylesheet" href="style.css?v=20261123c">
-    <script src="sentry.js?v=20261123c"></script>
+    <link rel="stylesheet" href="style.css?v=20261123d">
+    <script src="sentry.js?v=20261123d"></script>
 </head>
 <body class="sb-ready">
     <nav class="app-nav">
@@ -16,7 +16,6 @@
             <button class="nav-dropdown-btn" onclick="this.nextElementSibling.classList.toggle('open')">DRAFT PUNK</button>
             <div class="nav-dropdown-menu">
                 <a href="index.html?dashboard" class="nav-dropdown-item">DASHBOARD</a>
-                <a href="competition.html" class="nav-dropdown-item">COMPETITION</a>
                 <a href="write.html" class="nav-dropdown-item">WRITE</a>
             </div>
         </div>
@@ -42,6 +41,7 @@
                 <h2 id="admNoticeHead">NOTICES</h2>
                 <p class="adm-dim">Shown once to each writer, the next time they open the app between the start and end times. Offers can be turned off by writers; updates and competition news can't. Don't put anything secret in a scheduled notice: it's stored before it starts showing.</p>
                 <form id="admNoticeForm" class="adm-card adm-form">
+                    <input type="hidden" name="compId">
                     <label>TYPE<select name="type"><option value="update">Update</option><option value="competition">Competition</option><option value="offer">Offer</option></select></label>
                     <label>TITLE<input name="title" maxlength="120" required></label>
                     <label>TEXT<textarea name="body" maxlength="1500" rows="4" required></textarea></label>
@@ -55,8 +55,36 @@
                     </div>
                     <div class="adm-actions"><button type="submit">SAVE NOTICE</button><button type="button" class="btn-secondary" id="admNoticePreview">PREVIEW</button></div>
                     <p class="adm-err" id="admNoticeErr" aria-live="polite"></p>
+                    <p class="adm-dim" id="admNoticeInfo" aria-live="polite"></p>
                 </form>
                 <div id="admNotices"></div>
+            </section>
+
+            <section class="adm-section" aria-labelledby="admCompHead">
+                <h2 id="admCompHead">COMPETITIONS</h2>
+                <p class="adm-dim">Writers only see a competition (menu link, dashboard banner, competition page) while it's open. Drafts are seen by no one. The theme stays locked until opening time, even for a published competition. All times are UK time.</p>
+                <form id="admCompForm" class="adm-card adm-form">
+                    <input type="hidden" name="id">
+                    <label>TITLE<input name="title" maxlength="120" required></label>
+                    <label>THEME<textarea name="theme" maxlength="3000" rows="4"></textarea></label>
+                    <div class="adm-form-row">
+                        <label>MINIMUM WORDS<input name="minWords" type="number" min="50" max="100000" step="1" inputmode="numeric" required></label>
+                        <label>MAXIMUM WORDS<input name="maxWords" type="number" min="50" max="100000" step="1" inputmode="numeric" required></label>
+                    </div>
+                    <p class="adm-dim" id="admCompBand" aria-live="polite"></p>
+                    <div class="adm-form-row">
+                        <label>OPENS (UK TIME)<input name="opensAt" type="datetime-local" required></label>
+                        <label>CLOSES (UK TIME)<input name="closesAt" type="datetime-local" required></label>
+                    </div>
+                    <p class="adm-dim">Bosses: mossy golem (halfway), horned demon (final). Buddies: Tiny Draft the duckling (Finisher), Deadline Hopkins the hare (Entrant), Doe Dénouement the deer (Shortlisted), Reynard Redraft the fox (Champion). These are the launch set; later competitions will need new art.</p>
+                    <div class="adm-actions">
+                        <button type="submit" name="publish" value="1">PUBLISH</button>
+                        <button type="submit" class="btn-secondary" name="draft" value="1">SAVE AS DRAFT</button>
+                        <button type="button" class="btn-secondary" id="admCompCancel" hidden>CANCEL EDITING</button>
+                    </div>
+                    <p class="adm-err" id="admCompErr" aria-live="polite"></p>
+                </form>
+                <div id="admComps"></div>
             </section>
 
             <section class="adm-section" aria-labelledby="admSuspHead">
@@ -72,9 +100,9 @@
         </div>
     </main>
 
-    <script src="theme.js?v=20261123c"></script>
-    <script src="data-merge.js?v=20261123c"></script>
-    <script type="module" src="sync.js?v=20261123c"></script>
-    <script src="admin.js?v=20261123c"></script>
+    <script src="theme.js?v=20261123d"></script>
+    <script src="data-merge.js?v=20261123d"></script>
+    <script type="module" src="sync.js?v=20261123d"></script>
+    <script src="admin.js?v=20261123d"></script>
 </body>
 </html>

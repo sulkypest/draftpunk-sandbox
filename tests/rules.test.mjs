@@ -3,7 +3,7 @@
 // (requires: npm i -D @firebase/rules-unit-testing firebase)
 import { initializeTestEnvironment, assertSucceeds, assertFails } from '@firebase/rules-unit-testing';
 import { readFileSync } from 'node:fs';
-import { doc, setDoc, getDoc, deleteDoc, updateDoc } from 'firebase/firestore';
+import { doc, setDoc, getDoc, deleteDoc, updateDoc, getDocs, collection, query, where } from 'firebase/firestore';
 
 const env = await initializeTestEnvironment({
     projectId: 'dp-rules-test',
@@ -181,6 +181,38 @@ await t('owner can delete the owner entry last', () => assertSucceeds(deleteDoc(
 await t('a report with no owner entry and no account ID can\'t be deleted by anyone', async () => {
     await env.withSecurityRulesDisabled(ctx => setDoc(doc(ctx.firestore(), 'evidenceShares/dddddddddddddddddddddddd'), { title: 'T' }));
     await assertFails(deleteDoc(doc(as('adult'), 'evidenceShares/dddddddddddddddddddddddd')));
+});
+
+// ── Competitions ────────────────────────────────────────────────────────────
+await env.withSecurityRulesDisabled(async ctx => {
+    const db = ctx.firestore(), H = 3600000, now = Date.now();
+    const rec = (status, opensAt) => ({ title: 'T', status, opensAt, closesAt: opensAt + 48 * H, minWords: 800, maxWords: 1000 });
+    await setDoc(doc(db, 'competitions/open'), rec('published', now - H));
+    await setDoc(doc(db, 'competitions/open/secret/theme'), { text: 'Open theme' });
+    await setDoc(doc(db, 'competitions/soon'), rec('published', now + 24 * H));
+    await setDoc(doc(db, 'competitions/soon/secret/theme'), { text: 'Not yet' });
+    await setDoc(doc(db, 'competitions/draft'), rec('draft', now - H));
+    await setDoc(doc(db, 'competitions/draft/secret/theme'), { text: 'Draft theme' });
+});
+const compAdmin = env.authenticatedContext('boss', { admin: true }).firestore();
+await t('writer reads an open competition', () => assertSucceeds(getDoc(doc(as('adult'), 'competitions/open'))));
+await t('writer reads an open competition\'s theme', () => assertSucceeds(getDoc(doc(as('adult'), 'competitions/open/secret/theme'))));
+await t('writer sees a scheduled competition\'s record', () => assertSucceeds(getDoc(doc(as('adult'), 'competitions/soon'))));
+await t('writer can\'t read the theme before opening', () => assertFails(getDoc(doc(as('adult'), 'competitions/soon/secret/theme'))));
+await t('writer can\'t read a draft', () => assertFails(getDoc(doc(as('adult'), 'competitions/draft'))));
+await t('writer can\'t read a draft\'s theme', () => assertFails(getDoc(doc(as('adult'), 'competitions/draft/secret/theme'))));
+await t('signed-out can\'t read competitions', () => assertFails(getDoc(doc(anon, 'competitions/open'))));
+await t('writer lists published competitions', () => assertSucceeds(getDocs(query(collection(as('adult'), 'competitions'), where('status', '==', 'published')))));
+await t('writer can\'t list everything (drafts)', () => assertFails(getDocs(collection(as('adult'), 'competitions'))));
+await t('writer can\'t create a competition', () => assertFails(setDoc(doc(as('adult'), 'competitions/mine'), { title: 'X', status: 'published' })));
+await t('writer can\'t change a theme', () => assertFails(setDoc(doc(as('adult'), 'competitions/open/secret/theme'), { text: 'X' })));
+await t('admin reads a draft and its theme', async () => { await assertSucceeds(getDoc(doc(compAdmin, 'competitions/draft'))); await assertSucceeds(getDoc(doc(compAdmin, 'competitions/draft/secret/theme'))); });
+await t('admin reads a theme before opening', () => assertSucceeds(getDoc(doc(compAdmin, 'competitions/soon/secret/theme'))));
+await t('admin creates and deletes', async () => {
+    await assertSucceeds(setDoc(doc(compAdmin, 'competitions/new'), { title: 'N', status: 'draft', opensAt: 1, closesAt: 2 }));
+    await assertSucceeds(setDoc(doc(compAdmin, 'competitions/new/secret/theme'), { text: 'N' }));
+    await assertSucceeds(deleteDoc(doc(compAdmin, 'competitions/new/secret/theme')));
+    await assertSucceeds(deleteDoc(doc(compAdmin, 'competitions/new')));
 });
 
 console.log(`\n${n} passed, ${failed} failed`);

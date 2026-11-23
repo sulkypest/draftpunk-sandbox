@@ -7,9 +7,9 @@
     <meta name="robots" content="noindex">
     <title>COMPETITION STORY — DRAFT PUNK</title>
     <link rel="icon" href="DRAFTPUNK.png" type="image/png">
-    <link rel="stylesheet" href="style.css?v=20261123c">
+    <link rel="stylesheet" href="style.css?v=20261123d">
     <link rel="stylesheet" href="comp-preview.css?v=2">
-    <script src="sentry.js?v=20261123c"></script>
+    <script src="sentry.js?v=20261123d"></script>
     <style>
         .cw { max-width: 760px; margin: 0 auto; padding: 14px 16px 120px; font-family: var(--font-mono); color: var(--text); }
         .cw-top { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-bottom: 10px; font-size: 0.75rem; letter-spacing: 1px; }
@@ -42,16 +42,16 @@
     </style>
 </head>
 <body class="sb-ready">
-    <main class="cw">
+    <main class="cw" id="cwMain" hidden>
         <div class="cw-top">
             <a href="competition.html">← COMPETITION</a>
             <span class="cw-saved" id="cwSaved"></span>
         </div>
-        <div class="cp-preview">PREVIEW · NOT A LIVE COMPETITION</div>
-        <h1 class="cw-title">[Competition title]</h1>
+        <div class="cp-preview">SANDBOX · ENTRIES ARE STILL A PREVIEW, KEPT IN THIS BROWSER</div>
+        <h1 class="cw-title" id="cwTitle"></h1>
         <details class="cw-theme">
             <summary>SHOW THE THEME</summary>
-            <section class="cp-theme"><h2>THEME</h2><div class="cp-theme-text"><span class="cp-placeholder">Theme text goes here.</span></div></section>
+            <section class="cp-theme"><h2>THEME</h2><div class="cp-theme-text" id="cwTheme"></div></section>
         </details>
         <div class="cw-map" id="cwMap" aria-hidden="true"></div>
         <div class="cw-paper">
@@ -60,19 +60,29 @@
         </div>
     </main>
 
-    <div class="cw-bar">
+    <div class="cw-bar" id="cwBar" hidden>
         <div class="cw-bar-in">
             <div class="cw-count" id="cwCount" aria-live="polite"></div>
             <button type="button" id="cwSubmit" disabled>SUBMIT ENTRY</button>
         </div>
     </div>
 
-    <script src="theme.js?v=20261123c"></script>
-    <script src="fx.js?v=20261123c"></script>
-    <script src="comp-preview.js?v=1"></script>
+    <script src="theme.js?v=20261123d"></script>
+    <script src="fx.js?v=20261123d"></script>
+    <script src="data-merge.js?v=20261123d"></script>
+    <script type="module" src="sync.js?v=20261123d"></script>
+    <script src="comp-preview.js?v=2"></script>
     <script>
-    (function () {
-        const C = window.DPComp, B = C.BAND;
+    (async function () {
+        const C = window.DPComp, B = C.BAND, main = document.getElementById('cwMain');
+        const comp = await C.ready();
+        main.hidden = false;
+        if (!comp) { main.className = 'cp'; C.closedPage(main); return; }
+        document.getElementById('cwBar').hidden = false;
+        document.getElementById('cwTitle').textContent = comp.title;
+        document.getElementById('cwTheme').textContent = comp.theme;
+        // Writing stops at closing time; the page reloads into the closed view
+        setTimeout(() => location.reload(), Math.max(1000, comp.closesAt - Date.now() + 1000));
         const ed = document.getElementById('cwEditor'), countEl = document.getElementById('cwCount'), sub = document.getElementById('cwSubmit');
         let st = C.load();
         if (!st.started) { st.started = Date.now(); st.typed = 0; st.pasted = 0; C.save(st); }

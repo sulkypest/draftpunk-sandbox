@@ -148,6 +148,21 @@ service cloud.firestore {
       allow write: if isAdmin();
     }
 
+    // Competitions, created in the admin area. Writers can read a published
+    // competition's record (title, word band, times); drafts only the admin
+    // sees. The theme is in its own document that writers can only read once
+    // the competition has opened, enforced here rather than by the page.
+    match /competitions/{compId} {
+      allow get, list: if isAdmin() || (request.auth != null && resource.data.status == 'published');
+      allow write: if isAdmin();
+      match /secret/theme {
+        allow get: if isAdmin() || (request.auth != null
+                      && get(/databases/$(database)/documents/competitions/$(compId)).data.status == 'published'
+                      && request.time.toMillis() >= get(/databases/$(database)/documents/competitions/$(compId)).data.opensAt);
+        allow write: if isAdmin();
+      }
+    }
+
     // Weekly numbers, written by the server for the admin page
     match /ops/{docId} {
       allow get: if isAdmin() && docId == 'weeklyNumbers';

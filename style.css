@@ -2789,3 +2789,6 @@ body.dp-suspended { padding-bottom: 64px; }
 .swm-fb-msg { flex: 1; min-width: 0; }
 .swm-fb-btn { width: auto; min-width: unset; padding: 8px 14px; font-size: 0.7rem; }
 .msg-about { font-size: 0.68rem; letter-spacing: 1px; color: var(--text-dim); border-left: 2px solid var(--neon); padding-left: 6px; margin-bottom: 6px; }
+.adm-comp { margin-bottom: 8px; }
+.adm-comp .adm-quote { white-space: pre-wrap; }
+.adm-tag.live { border-color: var(--neon); color: var(--neon); }

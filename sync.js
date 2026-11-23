@@ -973,12 +973,46 @@ window.dpAdmin = {
             type: ['update', 'competition', 'offer'].includes(n.type) ? n.type : 'update',
             title: String(n.title || '').slice(0, 120), body: String(n.body || '').slice(0, 1500),
             buttonText: String(n.buttonText || '').slice(0, 40), buttonUrl: String(n.buttonUrl || '').slice(0, 300),
-            startAt: Number(n.startAt) || Date.now(), endAt: Number(n.endAt) || 0, createdAt: n.createdAt || Date.now()
+            startAt: Number(n.startAt) || Date.now(), endAt: Number(n.endAt) || 0, createdAt: n.createdAt || Date.now(),
+            ...(n.compId ? { compId: String(n.compId).slice(0, 60) } : {})
         };
         await setDoc(ref, rec);
         return ref.id;
     },
     async deleteNotice(id) { await deleteDoc(doc(db, 'announcements', id)); },
+    // Competitions: the public record (no theme) plus the theme in its own
+    // document, which the rules only let writers read once it has opened.
+    async competitions() {
+        const snap = await getDocs(collection(db, 'competitions'));
+        const list = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+        await Promise.all(list.map(async c => {
+            try { const t = await getDoc(doc(db, 'competitions', c.id, 'secret', 'theme')); c.theme = t.exists() ? (t.data().text || '') : ''; }
+            catch (e) { c.theme = ''; }
+        }));
+        return list.sort((a, b) => (b.opensAt || 0) - (a.opensAt || 0));
+    },
+    async saveCompetition(c) {
+        const ref = c.id ? doc(db, 'competitions', c.id) : doc(collection(db, 'competitions'));
+        const minWords = Math.round(Number(c.minWords)), maxWords = Math.round(Number(c.maxWords));
+        const rec = {
+            title: String(c.title || '').slice(0, 120),
+            minWords, maxWords, halfway: Math.round(minWords / 2), capWords: maxWords + 50,
+            opensAt: Number(c.opensAt), closesAt: Number(c.closesAt),
+            status: c.status === 'published' ? 'published' : 'draft',
+            bosses: [16, 17],
+            buddies: { finisher: 'duckling', entrant: 'hare', shortlisted: 'deer', champion: 'fox' },
+            createdAt: c.createdAt || Date.now(), updatedAt: Date.now()
+        };
+        // Theme first: if the record saved but the theme didn't, a published
+        // competition could open with no theme.
+        await setDoc(doc(db, 'competitions', ref.id, 'secret', 'theme'), { text: String(c.theme || '').slice(0, 3000) });
+        await setDoc(ref, rec);
+        return ref.id;
+    },
+    async deleteCompetition(id) {
+        await deleteDoc(doc(db, 'competitions', id, 'secret', 'theme'));
+        await deleteDoc(doc(db, 'competitions', id));
+    },
     async weekly() {
         try { const s = await getDoc(doc(db, 'ops', 'weeklyNumbers')); return s.exists() ? s.data() : null; } catch (e) { return null; }
     }
@@ -991,6 +1025,67 @@ async function readLeaderboardDoc(uid) {
     try { return await getDoc(doc(db, 'leaderboard', uid)); }
     catch (e) { return getDoc(doc(db, 'users', uid)); }
 }
+
+// ── Competitions ─────────────────────────────────────────────────────────────
+// A competition only shows up for writers (menu link, dashboard banner,
+// competition page) between its opening and closing times. Published
+// competitions are cached on the device so the link appears without a wait
+// and disappears on time even offline; the cache is refreshed every 10 min.
+const COMP_CACHE = 'dpCompetitions';
+function compCache() { try { return JSON.parse(localStorage.getItem(COMP_CACHE) || 'null'); } catch (e) { return null; } }
+function liveFrom(list, now = Date.now()) {
+    return (list || []).filter(c => c.status === 'published' && c.opensAt <= now && now < c.closesAt)
+        .sort((a, b) => a.closesAt - b.closesAt)[0] || null;
+}
+async function fetchCompetitions() {
+    const snap = await getDocs(query(collection(db, 'competitions'), where('status', '==', 'published')));
+    const list = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+    try { localStorage.setItem(COMP_CACHE, JSON.stringify({ at: Date.now(), list })); } catch (e) {}
+    return list;
+}
+window.dpCompetition = {
+    // The open competition with its theme, or null. Asks the database.
+    async live() {
+        if (!currentUser) return null;
+        let c;
+        try { c = liveFrom(await fetchCompetitions()); } catch (e) { c = liveFrom((compCache() || {}).list); }
+        if (!c) return null;
+        try { const t = await getDoc(doc(db, 'competitions', c.id, 'secret', 'theme')); c.theme = t.exists() ? (t.data().text || '') : ''; }
+        catch (e) { c.theme = ''; }
+        return c;
+    },
+    cached() { return liveFrom((compCache() || {}).list); }
+};
+function showCompetitionEntry(c) {
+    document.querySelectorAll('.dp-comp-link').forEach(el => el.remove());
+    document.querySelectorAll('a.nav-dropdown-item[href^="index.html?dashboard"]').forEach(a => {
+        const link = document.createElement('a');
+        link.href = 'competition.html'; link.className = 'nav-dropdown-item dp-comp-link';
+        link.textContent = 'COMPETITION';
+        if (/competition(-write)?\.html$/.test(location.pathname)) link.style.color = 'var(--neon)';
+        a.after(link);
+    });
+    const banner = document.getElementById('cpBanner');
+    if (banner) {
+        banner.hidden = !c;
+        if (c) {
+            banner.querySelector('[data-comp="title"]').textContent = c.title;
+            banner.querySelector('[data-comp="band"]').textContent = `${c.minWords.toLocaleString()}–${c.maxWords.toLocaleString()} words`;
+        }
+    }
+    if (!c) document.querySelectorAll('.dp-comp-link').forEach(el => el.remove());
+}
+async function checkCompetitions() {
+    const cache = compCache();
+    showCompetitionEntry(liveFrom(cache && cache.list));
+    if (!cache || Date.now() - cache.at > 10 * 60000) {
+        try { showCompetitionEntry(liveFrom(await fetchCompetitions())); } catch (e) { /* offline: keep the cached view */ }
+    }
+}
+// Show from the cache straight away, and recheck each minute so the link
+// goes at closing time without a reload.
+document.addEventListener('DOMContentLoaded', () => { const c = compCache(); showCompetitionEntry(liveFrom(c && c.list)); });
+setInterval(() => { const c = compCache(); if (c) showCompetitionEntry(liveFrom(c.list)); }, 60000);
 
 // ── Notices ──────────────────────────────────────────────────────────────────
 // Short announcements written in the admin area (updates, competitions,
@@ -1203,6 +1298,7 @@ async function continueAfterAuth(user) {
         checkAccount(user);
         checkSuspended(user);
         checkNotices(user);
+        checkCompetitions();
     }
 }
 

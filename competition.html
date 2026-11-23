@@ -7,8 +7,8 @@
     <meta name="robots" content="noindex">
     <title>COMPETITION — DRAFT PUNK</title>
     <link rel="icon" href="DRAFTPUNK.png" type="image/png">
-    <link rel="stylesheet" href="style.css?v=20261123c">
-    <script src="sentry.js?v=20261123c"></script>
+    <link rel="stylesheet" href="style.css?v=20261123d">
+    <script src="sentry.js?v=20261123d"></script>
     <link rel="stylesheet" href="comp-preview.css?v=2">
 </head>
 <body class="sb-ready">
@@ -18,7 +18,6 @@
             <div class="nav-dropdown-menu" id="draftMenu">
                 <a href="index.html?dashboard" class="nav-dropdown-item">DASHBOARD</a>
                 <a href="wordrunner.html" class="nav-dropdown-item">WORDRUNNER</a>
-                <a href="competition.html" class="nav-dropdown-item" style="color:var(--neon);">COMPETITION</a>
                 <a href="groups.html" class="nav-dropdown-item">WRITING GROUPS</a>
                 <a href="messages.html" class="nav-dropdown-item">MESSAGES</a>
             </div>
@@ -55,14 +54,14 @@
         </div>
     </nav>
 
-    <main class="cp">
-        <div class="cp-preview">PREVIEW · NOT A LIVE COMPETITION · <button type="button" class="cp-reset" id="cpReset" style="color:inherit;">START THE PREVIEW AGAIN</button></div>
+    <main class="cp" id="cpMain" hidden>
+        <div class="cp-preview">SANDBOX · ENTRIES ARE STILL A PREVIEW, KEPT IN THIS BROWSER · <button type="button" class="cp-reset" id="cpReset" style="color:inherit;">START AGAIN</button></div>
 
         <p class="cp-kicker">SHORT STORY COMPETITION</p>
-        <h1 class="cp-title">[Competition title]</h1>
+        <h1 class="cp-title" id="cpTitle"></h1>
 
         <dl class="cp-facts">
-            <div class="cp-fact"><dt>WORD COUNT</dt><dd>800–1,000 words</dd></div>
+            <div class="cp-fact"><dt>WORD COUNT</dt><dd id="cpBand"></dd></div>
             <div class="cp-fact"><dt>OPENS</dt><dd id="cpOpens"></dd></div>
             <div class="cp-fact"><dt>CLOSES</dt><dd id="cpCloses"></dd></div>
         </dl>
@@ -70,7 +69,7 @@
 
         <section class="cp-theme" aria-labelledby="cpThemeHead">
             <h2 id="cpThemeHead">THEME</h2>
-            <div class="cp-theme-text"><span class="cp-placeholder">Theme text goes here. This box has room for a few lines or a short paragraph, set in the same typeface as the Write page, and grows if the theme is longer.</span></div>
+            <div class="cp-theme-text" id="cpTheme"></div>
         </section>
 
         <section class="cp-sec" aria-labelledby="cpStoryHead">
@@ -92,7 +91,7 @@
             <h2 id="cpRulesHead">THE ESSENTIALS</h2>
             <ul class="cp-rules">
                 <li>Write your story in Draft Punk, between the opening and closing times.</li>
-                <li>Between 800 and 1,000 words. Up to 50 over is fine.</li>
+                <li id="cpRuleBand"></li>
                 <li>You keep the copyright. Winning stories are published on Draft Punk.</li>
             </ul>
         </section>
@@ -120,25 +119,38 @@
         </section>
     </main>
 
-    <script src="theme.js?v=20261123c"></script>
-    <script src="sidebar.js?v=20261123c"></script>
-    <script src="streak.js?v=20261123c"></script>
-    <script src="streak-ui.js?v=20261123c"></script>
-    <script src="backup.js?v=20261123c"></script>
-    <script src="fx.js?v=20261123c"></script>
-    <script src="comp-preview.js?v=1"></script>
+    <script src="theme.js?v=20261123d"></script>
+    <script src="sidebar.js?v=20261123d"></script>
+    <script src="streak.js?v=20261123d"></script>
+    <script src="streak-ui.js?v=20261123d"></script>
+    <script src="backup.js?v=20261123d"></script>
+    <script src="fx.js?v=20261123d"></script>
+    <script src="data-merge.js?v=20261123d"></script>
+    <script type="module" src="sync.js?v=20261123d"></script>
+    <script src="comp-preview.js?v=2"></script>
     <script>
-        (function () {
-            const C = window.DPComp, st = C.load(), d = C.dates();
+        (async function () {
+            const C = window.DPComp, main = document.getElementById('cpMain');
+            const comp = await C.ready();
+            main.hidden = false;
+            if (!comp) { C.closedPage(main); return; }
+            const st = C.load(), d = C.dates(), B = C.BAND;
             const uk = x => x.toLocaleString('en-GB', { timeZone: 'Europe/London', weekday: 'short', day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }) + ' UK';
             const local = x => 'Your time: ' + x.toLocaleString('en-GB', { weekday: 'short', day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' });
+            document.title = comp.title.toUpperCase() + ' — DRAFT PUNK';
+            document.getElementById('cpTitle').textContent = comp.title;
+            document.getElementById('cpBand').textContent = `${B.min.toLocaleString()}–${B.max.toLocaleString()} words`;
+            document.getElementById('cpRuleBand').textContent = `Between ${B.min.toLocaleString()} and ${B.max.toLocaleString()} words. Up to 50 over is fine.`;
+            document.getElementById('cpTheme').textContent = comp.theme;
             document.getElementById('cpOpens').innerHTML = uk(d.open) + '<small>' + local(d.open) + '</small>';
             document.getElementById('cpCloses').innerHTML = uk(d.close) + '<small>' + local(d.close) + '</small>';
             document.getElementById('cpCount').innerHTML = `Open now. Closes in <strong>${C.closesIn()}</strong>.`;
+            // Close the page at closing time if it's left open
+            setTimeout(() => location.reload(), Math.max(1000, comp.closesAt - Date.now() + 1000));
             const w = st.words || 0;
             C.map(document.getElementById('cpMap')).update(w, false);
             document.getElementById('cpWords').textContent = w.toLocaleString();
-            document.getElementById('cpToGo').textContent = w >= C.BAND.min ? `Ready to submit` : `${(C.BAND.min - w).toLocaleString()} to go to reach ${C.BAND.min.toLocaleString()}`;
+            document.getElementById('cpToGo').textContent = w >= B.min ? `Ready to submit` : `${(B.min - w).toLocaleString()} to go to reach ${B.min.toLocaleString()}`;
             const go = document.getElementById('cpGo');
             if (st.submittedAt) {
                 document.getElementById('cpEntered').innerHTML = `<div class="cp-entered"><strong>ENTERED · ${st.code}</strong>Submitted ${new Date(st.submittedAt).toLocaleString('en-GB', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })}. The judges have the version you submitted; your own copy stays yours to keep and edit.</div>`;
