@@ -80,8 +80,6 @@
         /* Story editor on the competition page (was competition-write.html) */
         .cw-map { margin: 6px 48px 0 22px; }
         .cw-paper { background: var(--paper, var(--panel)); border: 1px solid var(--border-mid); padding: 22px 20px; margin-top: 34px; }
-        .cw-editor { font-family: Literata, Georgia, serif; font-size: 1.1rem; line-height: 1.8; min-height: 50vh; outline: none; white-space: pre-wrap; overflow-wrap: anywhere; }
-        .cw-editor:empty::before { content: 'Start your story here.'; color: var(--text-dim); font-style: italic; }
         .cw-bar { position: fixed; left: 0; right: 0; bottom: 0; z-index: 50; background: var(--bg); border-top: 2px solid var(--text); }
         .cw-bar-in { max-width: 760px; margin: 0 auto; padding: 10px 16px; display: flex; align-items: center; gap: 12px; }
         .cw-count { flex: 1; font-size: 0.8rem; line-height: 1.4; }
@@ -98,8 +96,15 @@
         .cw-new { text-align: center; border: 2px solid var(--neon); padding: 12px; margin: 12px 0 16px; }
         .cw-new .cp-sprite { margin: -6px auto -2px; }
         .cw-paper { margin-top: 28px; }
-        .cw-editor { min-height: 40vh; }
-        .cp-saveline { font-size: 0.75rem; letter-spacing: 0.5px; color: var(--text-dim); margin: 8px 0 4px; }
+        .cw-paper { padding: 0; }
+        .cp-toolbar { flex-wrap: wrap; position: sticky; top: 0; z-index: 5; }
+        .cp-editor-wrap { position: relative; }
+        /* Fixed minimum so the box never changes size as the first line goes in */
+        .cp-editor { min-height: 40vh; box-sizing: border-box; padding: 18px 18px 24px; }
+        /* Laid over the editor, not inside it, so it can't affect the layout */
+        .cp-placeholder { position: absolute; top: 18px; left: 18px; right: 18px; pointer-events: none; color: var(--text-dim); font-family: var(--font-editor); font-style: italic; font-size: var(--write-font-size, 1rem); line-height: var(--write-line-height, 1.7); text-indent: 2em; }
+        .cp-placeholder[hidden] { display: none; }
+        .cp-saveline { font-size: 0.75rem; letter-spacing: 0.5px; line-height: 1.5; color: var(--text-dim); margin: 8px 0 4px; min-height: 3em; }
         main.cp { padding-bottom: 96px; }
         .cw-bar-in .btn-secondary { background: transparent; color: var(--text); border: 2px solid var(--text); }
         @media (max-width: 520px) { .cw-count-more { display: none; } .cw-bar-in { gap: 8px; padding: 8px 10px; } .cw-bar button { padding: 10px 10px; font-size: 0.7rem; letter-spacing: 1px; } .cw-count strong { font-size: 1.2rem; } }

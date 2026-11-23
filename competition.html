@@ -7,9 +7,9 @@
     <meta name="robots" content="noindex">
     <title>COMPETITION — DRAFT PUNK</title>
     <link rel="icon" href="DRAFTPUNK.png" type="image/png">
-    <link rel="stylesheet" href="style.css?v=20261123k">
-    <script src="sentry.js?v=20261123k"></script>
-    <link rel="stylesheet" href="comp-preview.css?v=6">
+    <link rel="stylesheet" href="style.css?v=20261123l">
+    <script src="sentry.js?v=20261123l"></script>
+    <link rel="stylesheet" href="comp-preview.css?v=7">
 </head>
 <body class="sb-ready">
     <nav class="app-nav">
@@ -78,7 +78,25 @@
             <div id="cpEntered"></div>
             <div class="cw-map" id="cpMap" aria-hidden="true"></div>
             <div class="cw-paper">
-                <div class="cw-editor" id="cpEditor" contenteditable="true" role="textbox" aria-multiline="true" aria-label="Your competition story" spellcheck="true"></div>
+                <!-- Same toolbar and editor style as the Write page -->
+                <div class="write-toolbar cp-toolbar" role="toolbar" aria-label="Formatting">
+                    <div class="write-tb-group">
+                        <button type="button" class="write-tb-btn write-tb-undo" onpointerdown="event.preventDefault(); document.execCommand('undo')" title="Undo" aria-label="Undo">↶</button>
+                        <button type="button" class="write-tb-btn write-tb-undo" onpointerdown="event.preventDefault(); document.execCommand('redo')" title="Redo" aria-label="Redo">↷</button>
+                    </div>
+                    <span class="write-tb-sep"></span>
+                    <div class="write-tb-group">
+                        <button type="button" class="write-tb-btn" onpointerdown="event.preventDefault(); document.execCommand('bold')" title="Bold" aria-label="Bold"><b>B</b></button>
+                        <button type="button" class="write-tb-btn" onpointerdown="event.preventDefault(); document.execCommand('italic')" title="Italic" aria-label="Italic"><em>I</em></button>
+                        <button type="button" class="write-tb-btn" onpointerdown="event.preventDefault(); document.execCommand('underline')" title="Underline" aria-label="Underline"><u>U</u></button>
+                        <button type="button" class="write-tb-btn" onpointerdown="event.preventDefault(); cpHeading()" title="Scene heading" aria-label="Scene heading">H2</button>
+                        <button type="button" class="write-tb-btn write-tb-clear" onpointerdown="event.preventDefault(); document.execCommand('removeFormat')" title="Clear formatting" aria-label="Clear formatting">T<sub>x</sub></button>
+                    </div>
+                </div>
+                <div class="cp-editor-wrap">
+                    <div class="write-area cp-editor" id="cpEditor" contenteditable="true" role="textbox" aria-multiline="true" aria-label="Your competition story" spellcheck="true"></div>
+                    <div class="cp-placeholder" id="cpPlaceholder" aria-hidden="true">Start your story here.</div>
+                </div>
             </div>
             <p class="cp-saveline" id="cpSaveLine" aria-live="polite"></p>
             <p class="cp-note">One story per writer. Writers aged 18 and over can enter. Your words count towards your streak, XP, buddies and the leaderboard.</p>
@@ -176,11 +194,11 @@
         </section>
     </main>
 
-    <script src="theme.js?v=20261123k"></script>
-    <script src="sidebar.js?v=20261123k"></script>
-    <script src="streak.js?v=20261123k"></script>
-    <script src="streak-ui.js?v=20261123k"></script>
-    <script src="backup.js?v=20261123k"></script>
+    <script src="theme.js?v=20261123l"></script>
+    <script src="sidebar.js?v=20261123l"></script>
+    <script src="streak.js?v=20261123l"></script>
+    <script src="streak-ui.js?v=20261123l"></script>
+    <script src="backup.js?v=20261123l"></script>
     <div class="cw-bar" id="cpBar" hidden>
         <div class="cw-bar-in">
             <div class="cw-count" id="cpCountBar" aria-live="polite"></div>
@@ -189,12 +207,37 @@
         </div>
     </div>
 
-    <script src="fx.js?v=20261123k"></script>
-    <script src="wordcount.js?v=20261123k"></script>
-    <script src="data-merge.js?v=20261123k"></script>
-    <script type="module" src="sync.js?v=20261123k"></script>
+    <script src="fx.js?v=20261123l"></script>
+    <script src="wordcount.js?v=20261123l"></script>
+    <script src="data-merge.js?v=20261123l"></script>
+    <script type="module" src="sync.js?v=20261123l"></script>
     <script src="comp-preview.js?v=5"></script>
     <script>
+        // Formatting allowed in the story (same set as the Write page); anything
+        // else pasted or typed in is stripped back to plain text.
+        const CP_TAGS = new Set(['B', 'STRONG', 'I', 'EM', 'U', 'H2', 'H3', 'P', 'BR', 'DIV']);
+        function cpClean(html) {
+            const tpl = document.createElement('template');
+            tpl.innerHTML = String(html || '');
+            const clean = node => [...node.childNodes].forEach(n => {
+                if (n.nodeType === 1) {
+                    if (!CP_TAGS.has(n.tagName)) {
+                        if (/^(SCRIPT|STYLE|IFRAME|OBJECT|EMBED|TEMPLATE|SVG|MATH|IMG)$/.test(n.tagName)) { n.remove(); return; }
+                        clean(n); n.replaceWith(...n.childNodes); return;
+                    }
+                    [...n.attributes].forEach(a => n.removeAttribute(a.name));
+                    clean(n);
+                } else if (n.nodeType !== 3) n.remove();
+            });
+            clean(tpl.content);
+            const d = document.createElement('div'); d.appendChild(tpl.content); return d.innerHTML;
+        }
+        // Scene heading on/off, as on the Write page
+        function cpHeading() {
+            const sel = window.getSelection(), node = sel && sel.rangeCount ? sel.anchorNode : null;
+            const block = node ? (node.nodeType === 3 ? node.parentElement : node) : null;
+            document.execCommand('formatBlock', false, block && block.closest('h2, h3') ? 'p' : 'h2');
+        }
         (async function () {
             const C = window.DPComp, main = document.getElementById('cpMain');
             const comp = await C.ready();
@@ -275,7 +318,11 @@
             const sub = document.getElementById('cpSubmit'), saveLine = document.getElementById('cpSaveLine');
             const closeDay = uk(d.close);
             let cur = C.load();
-            ed.innerText = cur.text || '';
+            if (cur.html) ed.innerHTML = cpClean(cur.html); else ed.innerText = cur.text || '';
+            const ph = document.getElementById('cpPlaceholder');
+            const showPh = () => { ph.hidden = /\S/.test(ed.innerText) || !!ed.querySelector('h2'); };
+            showPh();
+            ed.addEventListener('focus', showPh);
             const m = C.map(document.getElementById('cpMap'));
             document.getElementById('cpBar').hidden = false;
             window.onFinisher = () => setTimeout(() => showBuddy('finisher'), 1400);
@@ -283,11 +330,12 @@
                 const e = C.earned(C.load());
                 document.getElementById('cpBuddies').innerHTML = ['finisher', 'entrant', 'shortlisted', 'champion'].map(k => C.buddyCard(k, e[k])).join('');
             };
+            // Only the first part changes, so the line keeps the same length
             function setSaveLine(savedAt) {
-                saveLine.textContent = (savedAt
-                    ? `Saved ${new Date(savedAt).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' })}. `
-                    : 'Your story saves as you type. ')
-                    + `Come back any time before it closes on ${closeDay}.`;
+                const first = savedAt === 'saving' ? 'Saving…'
+                    : savedAt ? `Saved ${new Date(savedAt).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' })}.`
+                    : 'Saves as you type.';
+                saveLine.textContent = `${first} Come back any time before it closes on ${closeDay}.`;
             }
             function render(animate) {
                 const w = C.words(ed.innerText);
@@ -302,7 +350,7 @@
             function persist() {
                 const s2 = C.load();
                 if (!s2.started && C.words(ed.innerText)) { s2.started = Date.now(); s2.typed = 0; s2.pasted = s2.pasted || 0; }
-                s2.text = ed.innerText; s2.words = C.words(s2.text); s2.savedAt = Date.now(); C.save(s2);
+                s2.html = cpClean(ed.innerHTML); s2.text = ed.innerText; s2.words = C.words(s2.text); s2.savedAt = Date.now(); C.save(s2);
                 setSaveLine(s2.savedAt);
             }
             document.getElementById('cpSync').onclick = () => {
@@ -325,8 +373,8 @@
                 const s2 = C.load(); s2.pasted = (s2.pasted || 0) + parts.length; C.save(s2);
             });
             ed.addEventListener('input', () => {
-                render(true); clearTimeout(saveT);
-                saveLine.textContent = 'Saving…';
+                showPh(); render(true); clearTimeout(saveT);
+                setSaveLine('saving');
                 saveT = setTimeout(persist, 600);
             });
             // Don't lose the last few keystrokes when leaving
@@ -363,7 +411,7 @@
                 o.querySelector('#cpGoSubmit').onclick = () => {
                     const credit = C.readCredit(o, username);
                     if (credit.error) { o.querySelector('#cpSubErr').textContent = credit.error; return; }
-                    const s3 = C.load(); s3.credit = credit; s3.submittedAt = Date.now(); s3.code = 'DP-2026-01-0042'; s3.frozen = s3.text; C.save(s3);
+                    const s3 = C.load(); s3.credit = credit; s3.submittedAt = Date.now(); s3.code = 'DP-2026-01-0042'; s3.frozen = s3.text; s3.frozenHtml = s3.html; C.save(s3);
                     o.remove(); render(false); drawEntry(); renderBuddies();
                     if (window.DPFx) DPFx.comic('ENTERED!', { tone: 'green' });
                     setTimeout(() => {
