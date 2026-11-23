@@ -496,7 +496,7 @@ function swmFeedbackReset(share) {
     if (document.body.classList.contains('dp-under-min')) { bar.innerHTML = ''; return; }
     bar.innerHTML = isFriend
         ? `<button type="button" class="btn-secondary swm-fb-open" onclick="swmFeedbackOpen()">✉ SEND FEEDBACK TO ${name}</button>`
-        : `<p class="swm-fb-note">ONLY FRIENDS CAN MESSAGE EACH OTHER. ADD ${name} AS A FRIEND TO SEND FEEDBACK ON THIS CHAPTER.</p>`;
+        : `<p class="swm-fb-note">YOU CAN ONLY GIVE FEEDBACK TO FRIENDS.</p>`;
 }
 window.swmFeedbackOpen = function() {
     const share = _swmFeedbackShare; if (!share) return;
