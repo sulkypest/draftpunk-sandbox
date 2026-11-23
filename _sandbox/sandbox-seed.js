@@ -8,7 +8,7 @@
 (function () {
     const DB_KEY = 'dpSandboxDB';
     const SEED_KEY = 'dpSandboxSeeded';
-    const SEED_VERSION = '4';
+    const SEED_VERSION = '5';
     const rawSet = Storage.prototype.setItem;
     const store = (k, v) => rawSet.call(localStorage, k, v);
 
@@ -120,6 +120,32 @@
 
         const shared = chapterHtml(8, 50);
         db['shares/sbx-u1_sbx-x1_' + ME.uid] = { ownerId: 'sbx-u1', ownerUsername: 'test_ana', projectId: 'sbx-xp', projectTitle: 'Test Shared Project', chapterId: 'sbx-x1', chapterTitle: 'Test shared chapter', content: shared, wordCount: count(shared), sharedWith: [ME.uid], sharedWithUsernames: ['sandbox_me'], updatedAt: now - 2 * day };
+        // A busier "Shared with me": several writers and projects, chapters
+        // shared out of order, one chapter shared both directly and via the
+        // group, and a mix of read, new and updated.
+        const shareSeen = {};
+        const addShare = (owner, ownerU, projId, projTitle, chId, chTitle, order, daysAgo, opts = {}) => {
+            const html = chapterHtml(3 + (order || 0) % 4, 40);
+            const id = opts.group ? owner + '_' + chId + '_group_sbx-g1' : owner + '_' + chId + '_' + ME.uid;
+            db['shares/' + id] = { ownerId: owner, ownerUsername: ownerU, projectId: projId, projectTitle: projTitle, chapterId: chId, chapterTitle: chTitle,
+                ...(opts.noOrder ? {} : { chapterOrder: order }), content: html, wordCount: count(html),
+                sharedWith: opts.group ? members.filter(u => u !== owner) : [ME.uid],
+                sharedWithUsernames: opts.group ? members.filter(u => u !== owner).map(u => memberNames[u]) : ['sandbox_me'],
+                ...(opts.group ? { groupId: 'sbx-g1', groupName: 'Test Group' } : {}),
+                updatedAt: now - daysAgo * day };
+            if (opts.seen !== undefined) shareSeen[owner + '|' + chId] = opts.seen === 'old' ? now - (daysAgo + 1) * day : now - daysAgo * day;
+        };
+        shareSeen['sbx-u1|sbx-x1'] = now - 2 * day;
+        // test_cal: a 9-chapter novel, shared in a muddled order, older shares with no order saved
+        [5, 2, 8, 0, 3, 7, 1, 6, 4].forEach((n, i) => addShare('sbx-u3', 'test_cal', 'sbx-cp', 'Test Novel', 'sbx-c' + n, 'Chapter ' + (n + 1), n,
+            n === 8 ? 0.1 : 3 + i, { noOrder: n < 4, seen: n === 8 ? undefined : (n === 7 ? 'old' : 'yes') }));
+        // test_ana: a second project, one chapter also shared through the group
+        addShare('sbx-u1', 'test_ana', 'sbx-ap', 'Test Second Project', 'sbx-a1', 'Test opening', 0, 6, { seen: 'yes' });
+        addShare('sbx-u1', 'test_ana', 'sbx-ap', 'Test Second Project', 'sbx-a2', 'Test middle', 1, 5, { seen: 'yes' });
+        addShare('sbx-u1', 'test_ana', 'sbx-ap', 'Test Second Project', 'sbx-a2', 'Test middle', 1, 5, { group: true, seen: 'yes' });
+        // test_ben: one group share not yet read
+        addShare('sbx-u2', 'test_ben', 'sbx-bp', 'Test Group Story', 'sbx-b1', 'Test group chapter', 0, 1, { group: true });
+        db['users/' + ME.uid + '/private/shareSeen'] = shareSeen;
         save(db);
         store(SEED_KEY, SEED_VERSION);
     }

@@ -2297,7 +2297,7 @@ window.getGroupStats = async function(group) {
 
 // Share a chapter with every current member of a group (an ordinary share,
 // labelled with the group; members who join later don't get it automatically)
-window.createGroupShare = async function({ projectId, projectTitle, chapterId, chapterTitle, content, wordCount, group }) {
+window.createGroupShare = async function({ projectId, projectTitle, chapterId, chapterTitle, chapterOrder, content, wordCount, group }) {
     if (!currentUser) return { error: 'Not signed in.' };
     try {
         const others = (group.members || []).filter(u => u !== currentUser.uid);
@@ -2305,6 +2305,7 @@ window.createGroupShare = async function({ projectId, projectTitle, chapterId, c
         await setDoc(doc(db, 'shares', `${currentUser.uid}_${chapterId}_group_${group.id}`), {
             ownerId: currentUser.uid, ownerUsername: await myUsername(),
             projectId, projectTitle, chapterId, chapterTitle, content, wordCount,
+            ...(Number.isFinite(chapterOrder) ? { chapterOrder } : {}),
             sharedWith: others,
             sharedWithUsernames: others.map(u => (group.memberNames || {})[u] || '?'),
             groupId: group.id, groupName: group.name,
@@ -2427,7 +2428,7 @@ window.updateMessageBadge = updateMessageBadge;
 
 // ── Chapter sharing ────────────────────────────────────────────────────────────
 
-window.createShare = async function({ projectId, projectTitle, chapterId, chapterTitle, content, wordCount, sharedWithUid, sharedWithUsername }) {
+window.createShare = async function({ projectId, projectTitle, chapterId, chapterTitle, chapterOrder, content, wordCount, sharedWithUid, sharedWithUsername }) {
     if (!currentUser) return { error: 'Not signed in.' };
     try {
         const snap         = await getDoc(doc(db, 'users', currentUser.uid));
@@ -2442,6 +2443,7 @@ window.createShare = async function({ projectId, projectTitle, chapterId, chapte
             projectTitle,
             chapterId,
             chapterTitle,
+            ...(Number.isFinite(chapterOrder) ? { chapterOrder } : {}),
             content,
             wordCount,
             sharedWith:          [sharedWithUid],
@@ -2464,6 +2466,32 @@ window.getSharedWithMe = async function() {
     } catch (err) {
         return { error: err.message };
     }
+};
+
+// What this reader has opened and tidied away in "Shared with me". Kept in the
+// reader's own private area (users/{uid}/private/shareSeen and shareHidden);
+// nothing here touches the share itself, so the writer and other group
+// members are never affected.
+//   shareSeen:   { '<ownerId>|<chapterId>': updatedAt of the version read }
+//   shareHidden: { '<ownerId>|<projectId>': time hidden (0 = shown again) }
+window.getShareReads = async function() {
+    if (!currentUser) return { seen: {}, hidden: {}, fresh: false };
+    try {
+        const [s, h] = await Promise.all([
+            getDoc(doc(db, 'users', currentUser.uid, 'private', 'shareSeen')),
+            getDoc(doc(db, 'users', currentUser.uid, 'private', 'shareHidden'))
+        ]);
+        return { seen: s.exists() ? s.data() : {}, hidden: h.exists() ? h.data() : {}, fresh: !s.exists() };
+    } catch (err) { return { seen: {}, hidden: {}, fresh: false, error: err.message }; }
+};
+window.markSharesSeen = async function(map) {
+    if (!currentUser || !map || !Object.keys(map).length) return;
+    try { await setDoc(doc(db, 'users', currentUser.uid, 'private', 'shareSeen'), map, { merge: true }); } catch (err) {}
+};
+window.setShareProjectHidden = async function(key, time) {
+    if (!currentUser) return { error: 'Not signed in.' };
+    try { await setDoc(doc(db, 'users', currentUser.uid, 'private', 'shareHidden'), { [key]: time }, { merge: true }); return { success: true }; }
+    catch (err) { return { error: err.message }; }
 };
 
 window.deleteShare = async function(shareId) {

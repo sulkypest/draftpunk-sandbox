@@ -279,36 +279,185 @@ window.doAddFriend = async function() {
 };
 
 // ── Shared with me ────────────────────────────────────────────────────────────
-let _sharedWithMeData = [];
+// Grouped as writer + project, each folded to one line. A chapter that reached
+// this reader more than once (directly and through a group) shows once.
+let _sharedWithMeData = [];      // one entry per chapter, after merging duplicates
+let _shareReads = { seen: {}, hidden: {} };
+const _swmOpenProjects = new Set();
+let _swmShowHidden = false;
+
+const swmChapterKey = s => s.ownerId + '|' + s.chapterId;
+const swmProjectKey = s => s.ownerId + '|' + (s.projectId || s.projectTitle || '');
+
+function swmAgo(t) {
+    if (!t) return '';
+    const mins = Math.max(0, Math.round((Date.now() - t) / 60000));
+    if (mins < 60)   return mins <= 1 ? 'JUST NOW' : mins + ' MIN AGO';
+    const hrs = Math.round(mins / 60);
+    if (hrs < 24)    return hrs + 'H AGO';
+    const days = Math.round(hrs / 24);
+    if (days < 30)   return days === 1 ? 'YESTERDAY' : days + ' DAYS AGO';
+    return new Date(t).toLocaleDateString(undefined, { day: 'numeric', month: 'short', year: 'numeric' }).toUpperCase();
+}
+
+// Book order when every chapter in the project carries its position (shares
+// made from now on do). Otherwise natural title order ("Chapter 2" before
+// "Chapter 10"), so older shares and newer ones don't split into two runs.
+function swmSortChapters(chapters) {
+    const byTitle = (a, b) => String(a.chapterTitle || '').localeCompare(String(b.chapterTitle || ''), undefined, { numeric: true, sensitivity: 'base' });
+    const allOrdered = chapters.every(c => Number.isFinite(c.chapterOrder));
+    return chapters.sort(allOrdered ? (a, b) => (a.chapterOrder - b.chapterOrder) || byTitle(a, b) : byTitle);
+}
+
+function swmStatus(sh) {
+    const seen = _shareReads.seen[swmChapterKey(sh)];
+    if (!seen) return 'new';
+    return (sh.updatedAt || 0) > seen ? 'updated' : '';
+}
+
+function swmIsOpen() { try { return localStorage.getItem('dpSharedOpen') === '1'; } catch (e) { return false; } }
+
+window.toggleSharedWithMe = function(force) {
+    const open = typeof force === 'boolean' ? force : !swmIsOpen();
+    try { localStorage.setItem('dpSharedOpen', open ? '1' : '0'); } catch (e) {}
+    swmApplyOpen();
+};
+function swmApplyOpen() {
+    const open = swmIsOpen();
+    const btn = document.getElementById('swmToggle');
+    document.getElementById('sharedWithMeList').hidden = !open;
+    btn.setAttribute('aria-expanded', open ? 'true' : 'false');
+    btn.querySelector('.swm-caret').textContent = open ? '▾' : '▸';
+}
 
 async function loadSharedWithMe() {
     const container = document.getElementById('sharedWithMeList');
+    const summary   = document.getElementById('swmSummary');
     if (!container) return;
+    swmApplyOpen();
+    summary.textContent = '';
     container.innerHTML = '<div class="lb-loading">LOADING...</div>';
 
-    const result = await window.getSharedWithMe();
+    const [result, reads] = await Promise.all([window.getSharedWithMe(), window.getShareReads()]);
 
     if (!result || result.error) {
         container.innerHTML = '<div class="lb-empty">COULD NOT LOAD</div>';
         return;
     }
-    if (result.length === 0) {
+    // Merge the same chapter arriving more than once; keep the newest copy and
+    // remember every route it came by.
+    const byChapter = new Map();
+    result.forEach(sh => {
+        const k = swmChapterKey(sh), have = byChapter.get(k);
+        const via = sh.groupName ? 'VIA ' + sh.groupName : 'DIRECTLY';
+        if (!have) { byChapter.set(k, { ...sh, via: [via] }); return; }
+        const vias = have.via.includes(via) ? have.via : have.via.concat(via);
+        byChapter.set(k, (sh.updatedAt || 0) > (have.updatedAt || 0) ? { ...sh, via: vias } : { ...have, via: vias });
+    });
+    _sharedWithMeData = [...byChapter.values()];
+    _shareReads = { seen: reads.seen || {}, hidden: reads.hidden || {} };
+
+    // First visit after this feature arrives: count what's already here as read,
+    // so long-standing shares don't all light up as NEW.
+    if (reads.fresh && !reads.error && _sharedWithMeData.length) {
+        const base = {};
+        _sharedWithMeData.forEach(sh => { base[swmChapterKey(sh)] = sh.updatedAt || 1; });
+        Object.assign(_shareReads.seen, base);
+        window.markSharesSeen(base);
+    }
+    renderSharedWithMe();
+}
+
+function renderSharedWithMe() {
+    const container = document.getElementById('sharedWithMeList');
+    const summary   = document.getElementById('swmSummary');
+    const all = _sharedWithMeData;
+
+    if (!all.length) {
+        summary.textContent = 'NOTHING YET';
         container.innerHTML = '<div class="lb-empty">NOTHING SHARED WITH YOU YET</div>';
         return;
     }
 
-    _sharedWithMeData = result;
-    container.innerHTML = result.map(share => `
-        <div class="lb-row" style="flex-direction:column;align-items:flex-start;gap:4px;padding:10px;">
-            <div style="display:flex;width:100%;align-items:center;gap:8px;">
-                <span class="lb-name" style="flex:1;">${esc(share.chapterTitle)}</span>
-                <span class="lb-words">${(Number(share.wordCount) || 0).toLocaleString()} WDS</span>
-                <button data-id="${esc(share.id)}" onclick="viewShare(this.dataset.id)" style="font-size:0.75rem;padding:6px 10px;letter-spacing:1px;white-space:nowrap;">READ</button>
-            </div>
-            <div style="font-size:0.75rem;color:var(--text-dim);letter-spacing:1px;">${esc(share.projectTitle)} — FROM ${esc(share.ownerUsername)}${share.groupName ? ' · VIA GROUP ' + esc(share.groupName) : ''}</div>
-        </div>
-    `).join('');
+    // Writer + project cards, most recently updated first
+    const projects = new Map();
+    all.forEach(sh => {
+        const k = swmProjectKey(sh);
+        if (!projects.has(k)) projects.set(k, { key: k, ownerUsername: sh.ownerUsername, projectTitle: sh.projectTitle, chapters: [], updatedAt: 0, via: new Set() });
+        const p = projects.get(k);
+        p.chapters.push(sh);
+        p.updatedAt = Math.max(p.updatedAt, sh.updatedAt || 0);
+        sh.via.forEach(v => p.via.add(v));
+    });
+    const list = [...projects.values()].sort((a, b) => b.updatedAt - a.updatedAt);
+    list.forEach(p => {
+        swmSortChapters(p.chapters);
+        p.fresh = p.chapters.filter(swmStatus).length;
+        // Hidden until the writer shares something newer in this project
+        p.hidden = (_shareReads.hidden[p.key] || 0) >= p.updatedAt;
+    });
+    const shown  = list.filter(p => !p.hidden);
+    const hidden = list.filter(p => p.hidden);
+
+    const writers = new Set(shown.map(p => p.key.split('|')[0])).size;
+    const chCount = shown.reduce((n, p) => n + p.chapters.length, 0);
+    const freshAll = shown.reduce((n, p) => n + p.fresh, 0);
+    summary.innerHTML = shown.length
+        ? `${chCount} ${chCount === 1 ? 'CHAPTER' : 'CHAPTERS'} · ${writers} ${writers === 1 ? 'WRITER' : 'WRITERS'}` +
+          (freshAll ? ` <span class="swm-badge">${freshAll} NEW</span>` : '')
+        : 'ALL HIDDEN';
+
+    const card = p => {
+        const open = _swmOpenProjects.has(p.key);
+        const words = p.chapters.reduce((n, c) => n + (Number(c.wordCount) || 0), 0);
+        const rows = !open ? '' : p.chapters.map(sh => {
+            const st = swmStatus(sh);
+            return `<div class="swm-ch">
+                <span class="swm-ch-title">${esc(sh.chapterTitle)}${st ? ` <span class="swm-badge">${st === 'new' ? 'NEW' : 'UPDATED'}</span>` : ''}</span>
+                <span class="lb-words">${(Number(sh.wordCount) || 0).toLocaleString()} WDS</span>
+                <button type="button" class="swm-read" data-id="${esc(sh.id)}" onclick="viewShare(this.dataset.id)">READ</button>
+            </div>`;
+        }).join('');
+        const foot = !open ? '' : `<div class="swm-foot">
+                <span>SHARED ${esc([...p.via].sort().join(' AND '))}</span>
+                <button type="button" class="swm-link" data-key="${esc(p.key)}" onclick="${p.hidden ? 'unhideShareProject' : 'hideShareProject'}(this.dataset.key)">${p.hidden ? 'SHOW AGAIN' : 'HIDE'}</button>
+            </div>`;
+        return `<div class="swm-card${p.fresh ? ' swm-card-fresh' : ''}">
+            <button type="button" class="swm-head" aria-expanded="${open}" data-key="${esc(p.key)}" onclick="toggleShareProject(this.dataset.key)">
+                <span class="swm-caret" aria-hidden="true">${open ? '▾' : '▸'}</span>
+                <span class="swm-head-main">
+                    <span class="swm-proj">${esc(p.projectTitle || 'UNTITLED')}</span>
+                    <span class="swm-meta">${esc(p.ownerUsername || '?')} · ${p.chapters.length} CH · ${words.toLocaleString()} WDS · ${swmAgo(p.updatedAt)}</span>
+                </span>
+                ${p.fresh ? `<span class="swm-badge">${p.fresh} NEW</span>` : ''}
+            </button>
+            ${rows}${foot}
+        </div>`;
+    };
+
+    container.innerHTML =
+        (shown.length ? shown.map(card).join('') : '<div class="lb-empty">EVERYTHING HERE IS HIDDEN</div>') +
+        (hidden.length ? `<button type="button" class="swm-link swm-hidden-toggle" onclick="toggleHiddenShares()">${_swmShowHidden ? 'HIDE' : 'SHOW'} HIDDEN (${hidden.length})</button>` +
+            (_swmShowHidden ? `<div class="swm-hidden-list">${hidden.map(card).join('')}</div>` : '') : '');
 }
+
+window.toggleShareProject = function(key) {
+    if (_swmOpenProjects.has(key)) _swmOpenProjects.delete(key); else _swmOpenProjects.add(key);
+    renderSharedWithMe();
+};
+window.toggleHiddenShares = function() { _swmShowHidden = !_swmShowHidden; renderSharedWithMe(); };
+window.hideShareProject = async function(key) {
+    const t = Date.now();
+    _shareReads.hidden[key] = t;
+    _swmOpenProjects.delete(key);
+    renderSharedWithMe();
+    await window.setShareProjectHidden(key, t);
+};
+window.unhideShareProject = async function(key) {
+    _shareReads.hidden[key] = 0;
+    renderSharedWithMe();
+    await window.setShareProjectHidden(key, 0);
+};
 
 window.viewShare = function(shareId) {
     const share = _sharedWithMeData.find(s => s.id === shareId);
@@ -320,6 +469,13 @@ window.viewShare = function(shareId) {
         type: 'share', uid: share.ownerId, username: share.ownerUsername,
         path: 'shares/' + share.id, excerpt: share.chapterTitle });
     document.getElementById('shareViewOverlay').style.display = 'flex';
+    // Reading it clears its NEW / UPDATED mark
+    const k = swmChapterKey(share);
+    if ((_shareReads.seen[k] || 0) < (share.updatedAt || 1)) {
+        _shareReads.seen[k] = share.updatedAt || 1;
+        window.markSharesSeen({ [k]: share.updatedAt || 1 });
+        renderSharedWithMe();
+    }
 };
 window.onDpBlockChange = function() { closeShareView(); loadAll(); };
 
