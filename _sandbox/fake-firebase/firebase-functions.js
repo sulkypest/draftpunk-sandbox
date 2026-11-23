@@ -7,8 +7,8 @@ const tries = {};
 export const getFunctions = () => ({});
 export const httpsCallable = (fns, name) => async (data) => {
     await wait(400);
-    // Admin: sandbox_me is the admin when localStorage dpSandboxAdmin = '1'
-    if (name === 'claimAdmin') return { data: { admin: localStorage.getItem('dpSandboxAdmin') === '1' } };
+    // Admin: sandbox_me is the admin unless localStorage dpSandboxAdmin = '0'
+    if (name === 'claimAdmin') return { data: { admin: localStorage.getItem('dpSandboxAdmin') !== '0' } };
     if (name === 'issueWritingRecord') return { data: await issueWritingRecord(data || {}) };
     const email = String((data && data.email) || '').trim().toLowerCase();
     if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) fail('invalid-argument', 'bad-email');

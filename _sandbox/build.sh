@@ -12,7 +12,7 @@ git -C "$LIVE" archive HEAD | tar -x -C "$OUT"
 rm -f CNAME
 sed -i "s#https://www.gstatic.com/firebasejs/10.12.0/#./_sandbox/fake-firebase/#g" sync.js
 for f in *.html; do
-  grep -q '_sandbox/sandbox-seed.js' "$f" || sed -i '0,/<head[^>]*>/s##&\n    <script src="_sandbox/sandbox-seed.js?v=2"></script>#' "$f"
+  grep -q '_sandbox/sandbox-seed.js' "$f" || sed -i '0,/<head[^>]*>/s##&\n    <script src="_sandbox/sandbox-seed.js?v=3"></script>#' "$f"
 done
 sed -i "s/const CACHE = 'draftpunk-/const CACHE = 'draftpunk-sandbox-/" sw.js
 echo "live commit: $(git -C "$LIVE" rev-parse --short HEAD)" > _sandbox/BUILT_FROM

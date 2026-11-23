@@ -17,7 +17,7 @@
     const ME = { uid: 'sandbox-me', displayName: 'Sandbox Writer', photoURL: '',
         metadata: { creationTime: localStorage.getItem('dpSandboxNewAccount') === '1' ? 'Tue, 01 Dec 2026 10:00:00 GMT' : 'Mon, 01 Jan 2024 10:00:00 GMT' },
         getIdToken: async () => 'sandbox-token',
-        getIdTokenResult: async () => ({ claims: { admin: localStorage.getItem('dpSandboxAdmin') === '1' } }) };
+        getIdTokenResult: async () => ({ claims: { admin: localStorage.getItem('dpSandboxAdmin') !== '0' } }) };
     window.__mockUser = ME;
 
     // ── Pretend database ───────────────────────────────────────────────────────
@@ -155,9 +155,8 @@
     }
 
     if (localStorage.getItem(SEED_KEY) !== SEED_VERSION) seed();
-    // Opening the admin page in the sandbox makes the test account the admin
-    // (mock data only), so it can be tried without any console steps.
-    if (/admin\.html$/.test(location.pathname)) localStorage.setItem('dpSandboxAdmin', '1');
+    // The sandbox test account is the admin (mock data only). To see the
+    // non-admin view, set localStorage dpSandboxAdmin = '0'.
 
 
     window.dpSandboxReset = function () {

@@ -1404,7 +1404,7 @@ window.signInWithGoogle = async function() {
 let functionsApi = null;
 async function callFn(name, data) {
     if (!functionsApi) {
-        const m = await import('./_sandbox/fake-firebase/firebase-functions.js');
+        const m = await import('./_sandbox/fake-firebase/firebase-functions.js?v=2');
         functionsApi = { m, fns: m.getFunctions(app, 'us-central1') };
     }
     const res = await functionsApi.m.httpsCallable(functionsApi.fns, name)(data);
