@@ -15,16 +15,18 @@
     const $ = id => document.getElementById(id);
 
     async function waitForUser() {
-        for (let i = 0; i < 100; i++) {
+        // Up to 30 s: a slow connection (or iPad waking a tab) can take a while
+        for (let i = 0; i < 300; i++) {
             const u = window.getCurrentUser && window.getCurrentUser();
             if (u !== undefined && window.dpAdmin) return u;
             await new Promise(r => setTimeout(r, 100));
         }
-        return null;
+        return undefined;   // never finished loading (not the same as signed out)
     }
 
     async function start() {
         const user = await waitForUser();
+        if (user === undefined) { $('admStatus').textContent = "The app didn't finish loading. Refresh the page to try again."; return; }
         if (!user) { $('admStatus').textContent = 'Sign in first, then come back to this page.'; return; }
         if (!(await window.dpAdmin.check())) { $('admStatus').textContent = 'This page is for the Draft Punk admin only.'; return; }
         $('admStatus').style.display = 'none';
