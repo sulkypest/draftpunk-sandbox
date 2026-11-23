@@ -38,6 +38,41 @@
         KEY = 'dpCompPreview_' + COMP.id;
         return COMP;
     }
+    // ── Credit if the story wins: chosen at entry, changeable until winners
+    // are announced. Real name is typed in (the app doesn't hold one).
+    function esc(t) { return String(t).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]); }
+    function creditField(credit, username) {
+        const c = credit || {}, isName = c.type === 'name';
+        return `<fieldset class="cp-credit">
+            <legend>IF YOUR STORY WINS, CREDIT IT TO</legend>
+            <label class="dp-acct-tick"><input type="radio" name="cpCredit" value="username"${isName ? '' : ' checked'}><span>My username${username ? ': <b>' + esc(username) + '</b>' : ''}</span></label>
+            <label class="dp-acct-tick"><input type="radio" name="cpCredit" value="name"${isName ? ' checked' : ''}><span>My real name</span></label>
+            <input type="text" class="cp-credit-name" name="cpCreditName" maxlength="80" autocomplete="name" placeholder="Your name as it should appear" value="${isName ? esc(c.name || '') : ''}"${isName ? '' : ' hidden'}>
+            <p class="cp-note">You can change this until the winners are announced.</p>
+        </fieldset>`;
+    }
+    function wireCredit(box) {
+        const name = box.querySelector('.cp-credit-name');
+        const clearErr = () => box.querySelectorAll('.cp-err').forEach(e => { e.textContent = ''; });
+        name.addEventListener('input', clearErr);
+        box.querySelectorAll('input[name=cpCredit]').forEach(r => r.addEventListener('change', clearErr));
+        box.querySelectorAll('input[name=cpCredit]').forEach(r => r.onchange = () => {
+            name.hidden = box.querySelector('input[name=cpCredit]:checked').value !== 'name';
+            if (!name.hidden) name.focus();
+        });
+    }
+    // Returns { type, name } or { error }
+    function readCredit(box, username) {
+        const type = box.querySelector('input[name=cpCredit]:checked').value;
+        if (type === 'username') return { type, name: username || '' };
+        const name = box.querySelector('.cp-credit-name').value.trim();
+        return name ? { type, name } : { error: 'Add your name as it should appear, or choose your username.' };
+    }
+    function creditLabel(c) {
+        if (!c) return 'your username';
+        return c.type === 'name' ? `your real name (${c.name})` : `your username${c.name ? ' (' + c.name + ')' : ''}`;
+    }
+
     // Shown in place of a competition page when nothing is open
     function closedPage(main) {
         main.innerHTML = `<div class="cp-none"><p class="cp-kicker">SHORT STORY COMPETITION</p>
@@ -93,5 +128,6 @@
     }
 
     root.DPComp = { BAND, BUDDIES, load, save, words, earned, dates, closesIn, map, buddyCard, ready, closedPage,
+        creditField, wireCredit, readCredit, creditLabel, esc,
         get comp() { return COMP; }, reset() { localStorage.removeItem(KEY); } };
 })(window);

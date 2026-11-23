@@ -7,9 +7,9 @@
     <meta name="robots" content="noindex">
     <title>COMPETITION — DRAFT PUNK</title>
     <link rel="icon" href="DRAFTPUNK.png" type="image/png">
-    <link rel="stylesheet" href="style.css?v=20261123e">
-    <script src="sentry.js?v=20261123e"></script>
-    <link rel="stylesheet" href="comp-preview.css?v=3">
+    <link rel="stylesheet" href="style.css?v=20261123f">
+    <script src="sentry.js?v=20261123f"></script>
+    <link rel="stylesheet" href="comp-preview.css?v=4">
 </head>
 <body class="sb-ready">
     <nav class="app-nav">
@@ -153,7 +153,7 @@
                     <h3>8. Copyright and publication</h3>
                     <ul class="cp-rules">
                         <li>You keep all copyright in your story.</li>
-                        <li>By entering, you allow Draft Punk to publish your story in the app or on the Draft Punk website if it wins. You choose whether it's credited to your real name or your username.</li>
+                        <li>By entering, you allow Draft Punk to publish your story in the app or on the Draft Punk website if it wins. When you enter, you choose whether it's credited to your real name or your username, and you can change this until the winners are announced.</li>
                     </ul>
 
                     <h3>9. Competition buddies</h3>
@@ -174,15 +174,15 @@
         </section>
     </main>
 
-    <script src="theme.js?v=20261123e"></script>
-    <script src="sidebar.js?v=20261123e"></script>
-    <script src="streak.js?v=20261123e"></script>
-    <script src="streak-ui.js?v=20261123e"></script>
-    <script src="backup.js?v=20261123e"></script>
-    <script src="fx.js?v=20261123e"></script>
-    <script src="data-merge.js?v=20261123e"></script>
-    <script type="module" src="sync.js?v=20261123e"></script>
-    <script src="comp-preview.js?v=3"></script>
+    <script src="theme.js?v=20261123f"></script>
+    <script src="sidebar.js?v=20261123f"></script>
+    <script src="streak.js?v=20261123f"></script>
+    <script src="streak-ui.js?v=20261123f"></script>
+    <script src="backup.js?v=20261123f"></script>
+    <script src="fx.js?v=20261123f"></script>
+    <script src="data-merge.js?v=20261123f"></script>
+    <script type="module" src="sync.js?v=20261123f"></script>
+    <script src="comp-preview.js?v=4"></script>
     <script>
         (async function () {
             const C = window.DPComp, main = document.getElementById('cpMain');
@@ -212,8 +212,56 @@
             document.getElementById('cpWords').textContent = w.toLocaleString();
             document.getElementById('cpToGo').textContent = w >= B.min ? `Ready to submit` : `${(B.min - w).toLocaleString()} to go to reach ${B.min.toLocaleString()}`;
             const go = document.getElementById('cpGo');
+            const fmt = t => new Date(t).toLocaleString('en-GB', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' });
+            const box = document.getElementById('cpEntered');
+            const overlay = html => {
+                const o = document.createElement('div'); o.className = 'dp-acct-overlay';
+                o.innerHTML = `<div class="dp-acct-box" style="max-width:440px;">${html}</div>`;
+                document.body.appendChild(o); return o;
+            };
+            const drawEntry = () => {
+                const s = C.load();
+                if (!s.submittedAt) { box.innerHTML = ''; return; }
+                if (s.withdrawnAt) {
+                    box.innerHTML = `<div class="cp-entered cp-withdrawn"><strong>WITHDRAWN · ${C.esc(s.code)}</strong>Withdrawn ${fmt(s.withdrawnAt)}. This entry has been removed from judging, and this competition can't be entered again. Your story is still yours to keep and edit.</div>`;
+                    return;
+                }
+                box.innerHTML = `<div class="cp-entered"><strong>ENTERED · ${C.esc(s.code)}</strong>Submitted ${fmt(s.submittedAt)}. The judges have the version you submitted; your own copy stays yours to keep and edit.
+                    <br>If it wins, it's credited to ${C.esc(C.creditLabel(s.credit))}.
+                    <div class="cp-entered-actions">
+                        <button type="button" class="btn-secondary" id="cpCreditBtn">CHANGE CREDIT</button>
+                        <button type="button" class="btn-secondary" id="cpWithdrawBtn">WITHDRAW ENTRY</button>
+                    </div></div>`;
+                document.getElementById('cpCreditBtn').onclick = async () => {
+                    const username = await window.dpCompetition.myUsername();
+                    const o = overlay(`<h2>Credit if your story wins</h2>${C.creditField(C.load().credit, username)}
+                        <p class="cp-err" id="cpCreditErr" role="alert"></p>
+                        <button type="button" class="dp-acct-btn" id="cpCreditSave">SAVE</button>
+                        <button type="button" class="dp-acct-later" id="cpCreditCancel">CANCEL</button>`);
+                    C.wireCredit(o);
+                    o.querySelector('#cpCreditCancel').onclick = () => o.remove();
+                    o.querySelector('#cpCreditSave').onclick = () => {
+                        const credit = C.readCredit(o, username);
+                        if (credit.error) { o.querySelector('#cpCreditErr').textContent = credit.error; return; }
+                        const s2 = C.load(); s2.credit = credit; C.save(s2);
+                        o.remove(); drawEntry();
+                    };
+                };
+                document.getElementById('cpWithdrawBtn').onclick = () => {
+                    const o = overlay(`<h2>Withdraw your entry?</h2>
+                        <p>Entry <b>${C.esc(C.load().code)}</b> will be removed from judging. You <b>can't enter this competition again</b> after withdrawing.</p>
+                        <p class="cw-record" style="font-size:0.75rem;color:var(--text-dim);">Your story stays yours: you can keep reading, editing and exporting it.</p>
+                        <button type="button" class="dp-acct-btn" id="cpWdGo" style="background:var(--red-ink);">WITHDRAW MY ENTRY</button>
+                        <button type="button" class="dp-acct-later" id="cpWdCancel">KEEP MY ENTRY</button>`);
+                    o.querySelector('#cpWdCancel').onclick = () => o.remove();
+                    o.querySelector('#cpWdGo').onclick = () => {
+                        const s2 = C.load(); s2.withdrawnAt = Date.now(); C.save(s2);
+                        o.remove(); drawEntry();
+                    };
+                };
+            };
+            drawEntry();
             if (st.submittedAt) {
-                document.getElementById('cpEntered').innerHTML = `<div class="cp-entered"><strong>ENTERED · ${st.code}</strong>Submitted ${new Date(st.submittedAt).toLocaleString('en-GB', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })}. The judges have the version you submitted; your own copy stays yours to keep and edit.</div>`;
                 go.textContent = 'OPEN YOUR STORY';
             } else if (st.started) go.textContent = 'CONTINUE YOUR STORY';
             const e = C.earned(st);

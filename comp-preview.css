@@ -68,3 +68,11 @@
         .cp-prize { font-size: 0.8rem; letter-spacing: 1px; margin: 4px 0 8px; }
         .cp-prize b { color: var(--neon); margin-right: 6px; }
         .cp-prize[hidden] { display: none; }
+        .cp-credit { border: 1px solid var(--border-mid); padding: 10px 12px 4px; margin: 0 0 12px; }
+        .cp-credit legend { font-size: 0.7rem; letter-spacing: 1px; padding: 0 4px; }
+        .cp-credit-name { width: 100%; box-sizing: border-box; margin: 2px 0 8px; }
+        .cp-credit-name[hidden] { display: none; }
+        .cp-entered-actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px; }
+        .cp-entered-actions button { width: auto; min-width: 0; padding: 8px 12px; font-size: 0.7rem; letter-spacing: 1px; }
+        .cp-withdrawn { border-color: var(--border-mid) !important; }
+        .cp-err { color: var(--red-ink); font-size: 0.75rem; margin: 0 0 8px; }

@@ -1088,7 +1088,13 @@ window.dpCompetition = {
         catch (e) { c.theme = ''; }
         return c;
     },
-    cached() { return liveFrom((compCache() || {}).list); }
+    cached() { return liveFrom((compCache() || {}).list); },
+    // For the "credit me as" choice on entries
+    async myUsername() {
+        if (!currentUser) return '';
+        try { const s = await getDoc(doc(db, 'users', currentUser.uid)); return s.exists() ? (s.data().username || '') : ''; }
+        catch (e) { return ''; }
+    }
 };
 function showCompetitionEntry(c) {
     document.querySelectorAll('.dp-comp-link').forEach(el => el.remove());

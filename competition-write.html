@@ -7,9 +7,9 @@
     <meta name="robots" content="noindex">
     <title>COMPETITION STORY — DRAFT PUNK</title>
     <link rel="icon" href="DRAFTPUNK.png" type="image/png">
-    <link rel="stylesheet" href="style.css?v=20261123e">
-    <link rel="stylesheet" href="comp-preview.css?v=3">
-    <script src="sentry.js?v=20261123e"></script>
+    <link rel="stylesheet" href="style.css?v=20261123f">
+    <link rel="stylesheet" href="comp-preview.css?v=4">
+    <script src="sentry.js?v=20261123f"></script>
     <style>
         .cw { max-width: 760px; margin: 0 auto; padding: 14px 16px 120px; font-family: var(--font-mono); color: var(--text); }
         .cw-top { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-bottom: 10px; font-size: 0.75rem; letter-spacing: 1px; }
@@ -67,12 +67,12 @@
         </div>
     </div>
 
-    <script src="theme.js?v=20261123e"></script>
-    <script src="fx.js?v=20261123e"></script>
-    <script src="data-merge.js?v=20261123e"></script>
-    <script type="module" src="sync.js?v=20261123e"></script>
-    <script src="wordcount.js?v=20261123e"></script>
-    <script src="comp-preview.js?v=3"></script>
+    <script src="theme.js?v=20261123f"></script>
+    <script src="fx.js?v=20261123f"></script>
+    <script src="data-merge.js?v=20261123f"></script>
+    <script type="module" src="sync.js?v=20261123f"></script>
+    <script src="wordcount.js?v=20261123f"></script>
+    <script src="comp-preview.js?v=4"></script>
     <script>
     (async function () {
         const C = window.DPComp, B = C.BAND, main = document.getElementById('cwMain');
@@ -100,7 +100,7 @@
             else line = `<strong>${w.toLocaleString()}</strong> words · that's the limit for this story`;
             countEl.innerHTML = line;
             sub.disabled = !!st.submittedAt || w < B.min || w > B.cap;
-            if (st.submittedAt) sub.textContent = 'ENTERED';
+            if (st.submittedAt) sub.textContent = st.withdrawnAt ? 'WITHDRAWN' : 'ENTERED';
             return w;
         }
         let saveT = null;
@@ -133,8 +133,10 @@
             o.innerHTML = `<div class="dp-acct-box" style="max-width:440px;">${html}</div>`;
             document.body.appendChild(o); return o;
         }
-        sub.onclick = () => {
+        const usernameP = window.dpCompetition ? window.dpCompetition.myUsername() : Promise.resolve('');
+        sub.onclick = async () => {
             persist(); st = C.load();
+            const username = await usernameP;
             const w = C.words(st.text), pasted = st.pasted || 0;
             const o = overlay(`
                 <h2>Submit your entry</h2>
@@ -145,13 +147,18 @@
                     <li class="${pasted ? 'bad' : ''}"><b>${pasted ? '!' : '✓'}</b>${pasted ? `${pasted.toLocaleString()} words were pasted in. Judges see this in your Writing Record.` : 'Every word typed in Draft Punk'}</li>
                 </ul>
                 <p class="cw-record">The judges get the story exactly as it is now, with an entry code instead of your name, and your Writing Record. Your own copy stays yours: you can keep editing it, but changes won't reach the judges.</p>
+                ${C.creditField(st.credit, username)}
+                <p class="cp-err" id="cwErr" role="alert"></p>
                 <label class="dp-acct-tick"><input type="checkbox" id="cwAgree"><span>I wrote this story myself, and I accept the <a href="competition.html#cpTermsHead">competition terms</a>.</span></label>
                 <button type="button" class="dp-acct-btn" id="cwGo" disabled style="margin-top:10px;">SUBMIT ENTRY</button>
                 <button type="button" class="dp-acct-later" id="cwCancel">NOT YET</button>`);
+            C.wireCredit(o);
             o.querySelector('#cwAgree').onchange = e => { o.querySelector('#cwGo').disabled = !e.target.checked; };
             o.querySelector('#cwCancel').onclick = () => o.remove();
             o.querySelector('#cwGo').onclick = () => {
-                st = C.load(); st.submittedAt = Date.now(); st.code = 'DP-2026-01-0042'; st.frozen = st.text; C.save(st);
+                const credit = C.readCredit(o, username);
+                if (credit.error) { o.querySelector('#cwErr').textContent = credit.error; return; }
+                st = C.load(); st.credit = credit; st.submittedAt = Date.now(); st.code = 'DP-2026-01-0042'; st.frozen = st.text; C.save(st);
                 o.remove(); render(false);
                 if (window.DPFx) DPFx.comic('ENTERED!', { tone: 'green' });
                 setTimeout(() => {
@@ -165,7 +172,7 @@
                             <div class="cp-sprite" style="background-image:url(competition-buddies/${b.img}.png)"></div>
                             <p class="cp-bname">${b.name}</p><p class="cp-how">${b.fact}</p>
                         </div>
-                        <p class="cw-record">The shortlist and winner are announced after judging.</p>
+                        <p class="cw-record">If it wins, it's credited to ${C.esc(C.creditLabel(st.credit))}. The shortlist and winner are announced after judging. You can change your credit or withdraw from the competition page.</p>
                         <a class="dp-acct-btn" href="competition.html">BACK TO THE COMPETITION</a>
                         <button type="button" class="dp-acct-later" id="cwStay">KEEP READING MY STORY</button>`);
                     c.querySelector('#cwStay').onclick = () => c.remove();
