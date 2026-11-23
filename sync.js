@@ -1098,24 +1098,38 @@ window.dpCompetition = {
         catch (e) { return ''; }
     }
 };
+// The writer's own progress on the open competition's story.
+// Preview: read from this browser; real stories come with step 1.
+function compProgress(c) {
+    try {
+        const st = JSON.parse(localStorage.getItem('dpCompPreview_' + c.id) || '{}');
+        const words = Number(st.words) || 0;
+        return { words, started: words > 0 || !!st.started, entered: !!st.submittedAt && !st.withdrawnAt, withdrawn: !!st.withdrawnAt, code: st.code || '' };
+    } catch (e) { return { words: 0, started: false, entered: false, withdrawn: false, code: '' }; }
+}
 function showCompetitionEntry(c) {
     document.querySelectorAll('.dp-comp-link').forEach(el => el.remove());
-    document.querySelectorAll('a.nav-dropdown-item[href^="index.html?dashboard"]').forEach(a => {
+    const p = c ? compProgress(c) : null;
+    if (c) document.querySelectorAll('a.nav-dropdown-item[href^="index.html?dashboard"]').forEach(a => {
         const link = document.createElement('a');
-        link.href = 'competition.html'; link.className = 'nav-dropdown-item dp-comp-link';
-        link.textContent = 'COMPETITION';
-        if (/competition(-write)?\.html$/.test(location.pathname)) link.style.color = 'var(--neon)';
+        link.href = p.started ? 'competition.html#story' : 'competition.html';
+        link.className = 'nav-dropdown-item dp-comp-link';
+        link.textContent = p.entered ? 'COMPETITION · ENTERED'
+            : p.started ? `COMPETITION · ${p.words.toLocaleString()}/${c.minWords.toLocaleString()}` : 'COMPETITION';
+        if (/competition\.html$/.test(location.pathname)) link.style.color = 'var(--neon)';
         a.after(link);
     });
     const banner = document.getElementById('cpBanner');
-    if (banner) {
-        banner.hidden = !c;
-        if (c) {
-            banner.querySelector('[data-comp="title"]').textContent = c.title;
-            banner.querySelector('[data-comp="band"]').textContent = `${c.minWords.toLocaleString()}–${c.maxWords.toLocaleString()} words`;
-        }
-    }
-    if (!c) document.querySelectorAll('.dp-comp-link').forEach(el => el.remove());
+    if (!banner) return;
+    banner.hidden = !c;
+    if (!c) return;
+    const closes = new Date(c.closesAt).toLocaleString('en-GB', { timeZone: 'Europe/London', weekday: 'short', day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }) + ' UK';
+    banner.href = p.started ? 'competition.html#story' : 'competition.html';
+    banner.querySelector('[data-comp="title"]').textContent = c.title;
+    banner.querySelector('[data-comp="line"]').textContent = p.entered ? `Entered · ${p.code}. You can still read and edit your own copy.`
+        : p.started ? `Your story is saved: ${p.words.toLocaleString()} of ${c.minWords.toLocaleString()} words. Closes ${closes}.`
+        : `${c.minWords.toLocaleString()}–${c.maxWords.toLocaleString()} words · closes ${closes}.`;
+    banner.querySelector('[data-comp="go"]').textContent = p.entered ? 'OPEN YOUR STORY →' : p.started ? 'CONTINUE YOUR STORY →' : 'SEE THE THEME →';
 }
 async function checkCompetitions() {
     const cache = compCache();

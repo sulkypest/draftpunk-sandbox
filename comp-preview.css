@@ -76,3 +76,30 @@
         .cp-entered-actions button { width: auto; min-width: 0; padding: 8px 12px; font-size: 0.7rem; letter-spacing: 1px; }
         .cp-withdrawn { border-color: var(--border-mid) !important; }
         .cp-err { color: var(--red-ink); font-size: 0.75rem; margin: 0 0 8px; }
+
+        /* Story editor on the competition page (was competition-write.html) */
+        .cw-map { margin: 6px 48px 0 22px; }
+        .cw-paper { background: var(--paper, var(--panel)); border: 1px solid var(--border-mid); padding: 22px 20px; margin-top: 34px; }
+        .cw-editor { font-family: Literata, Georgia, serif; font-size: 1.1rem; line-height: 1.8; min-height: 50vh; outline: none; white-space: pre-wrap; overflow-wrap: anywhere; }
+        .cw-editor:empty::before { content: 'Start your story here.'; color: var(--text-dim); font-style: italic; }
+        .cw-bar { position: fixed; left: 0; right: 0; bottom: 0; z-index: 50; background: var(--bg); border-top: 2px solid var(--text); }
+        .cw-bar-in { max-width: 760px; margin: 0 auto; padding: 10px 16px; display: flex; align-items: center; gap: 12px; }
+        .cw-count { flex: 1; font-size: 0.8rem; line-height: 1.4; }
+        .cw-count strong { font-family: var(--font-display); font-size: 1.5rem; letter-spacing: 1px; }
+        .cw-count .warn { color: var(--red-ink); font-weight: 700; }
+        .cw-bar button { width: auto; min-width: 0; padding: 12px 16px; font-size: 0.8rem; letter-spacing: 2px; font-weight: 900; }
+        .cw-bar button:disabled { opacity: 0.4; cursor: not-allowed; }
+        .cw-check { list-style: none; padding: 0; margin: 0 0 14px; font-size: 0.85rem; line-height: 1.6; }
+        .cw-check li { display: flex; gap: 10px; padding: 6px 0; border-bottom: 1px solid var(--border-mid); }
+        .cw-check li b { width: 1.2em; flex-shrink: 0; color: var(--neon); }
+        .cw-check li.bad b { color: var(--red-ink); }
+        .cw-record { font-size: 0.75rem; color: var(--text-dim); margin: 0 0 12px; line-height: 1.6; }
+        .cw-code { font-family: var(--font-display); font-size: 2rem; letter-spacing: 2px; margin: 6px 0 12px; color: var(--neon); }
+        .cw-new { text-align: center; border: 2px solid var(--neon); padding: 12px; margin: 12px 0 16px; }
+        .cw-new .cp-sprite { margin: -6px auto -2px; }
+        .cw-paper { margin-top: 28px; }
+        .cw-editor { min-height: 40vh; }
+        .cp-saveline { font-size: 0.75rem; letter-spacing: 0.5px; color: var(--text-dim); margin: 8px 0 4px; }
+        main.cp { padding-bottom: 96px; }
+        .cw-bar-in .btn-secondary { background: transparent; color: var(--text); border: 2px solid var(--text); }
+        @media (max-width: 520px) { .cw-count-more { display: none; } .cw-bar-in { gap: 8px; padding: 8px 10px; } .cw-bar button { padding: 10px 10px; font-size: 0.7rem; letter-spacing: 1px; } .cw-count strong { font-size: 1.2rem; } }

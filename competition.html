@@ -7,9 +7,9 @@
     <meta name="robots" content="noindex">
     <title>COMPETITION — DRAFT PUNK</title>
     <link rel="icon" href="DRAFTPUNK.png" type="image/png">
-    <link rel="stylesheet" href="style.css?v=20261123j">
-    <script src="sentry.js?v=20261123j"></script>
-    <link rel="stylesheet" href="comp-preview.css?v=4">
+    <link rel="stylesheet" href="style.css?v=20261123k">
+    <script src="sentry.js?v=20261123k"></script>
+    <link rel="stylesheet" href="comp-preview.css?v=6">
 </head>
 <body class="sb-ready">
     <nav class="app-nav">
@@ -76,9 +76,11 @@
         <section class="cp-sec" aria-labelledby="cpStoryHead">
             <h2 id="cpStoryHead">YOUR STORY</h2>
             <div id="cpEntered"></div>
-            <div id="cpMap" aria-hidden="true"></div>
-            <div class="cp-progress"><span><strong id="cpWords">0</strong> words</span><span id="cpToGo"></span></div>
-            <a class="cp-btn" id="cpGo" href="competition-write.html" style="text-align:center;text-decoration:none;">START YOUR STORY</a>
+            <div class="cw-map" id="cpMap" aria-hidden="true"></div>
+            <div class="cw-paper">
+                <div class="cw-editor" id="cpEditor" contenteditable="true" role="textbox" aria-multiline="true" aria-label="Your competition story" spellcheck="true"></div>
+            </div>
+            <p class="cp-saveline" id="cpSaveLine" aria-live="polite"></p>
             <p class="cp-note">One story per writer. Writers aged 18 and over can enter. Your words count towards your streak, XP, buddies and the leaderboard.</p>
         </section>
 
@@ -174,15 +176,24 @@
         </section>
     </main>
 
-    <script src="theme.js?v=20261123j"></script>
-    <script src="sidebar.js?v=20261123j"></script>
-    <script src="streak.js?v=20261123j"></script>
-    <script src="streak-ui.js?v=20261123j"></script>
-    <script src="backup.js?v=20261123j"></script>
-    <script src="fx.js?v=20261123j"></script>
-    <script src="data-merge.js?v=20261123j"></script>
-    <script type="module" src="sync.js?v=20261123j"></script>
-    <script src="comp-preview.js?v=4"></script>
+    <script src="theme.js?v=20261123k"></script>
+    <script src="sidebar.js?v=20261123k"></script>
+    <script src="streak.js?v=20261123k"></script>
+    <script src="streak-ui.js?v=20261123k"></script>
+    <script src="backup.js?v=20261123k"></script>
+    <div class="cw-bar" id="cpBar" hidden>
+        <div class="cw-bar-in">
+            <div class="cw-count" id="cpCountBar" aria-live="polite"></div>
+            <button type="button" class="btn-secondary" id="cpSync">SYNC AND SAVE</button>
+            <button type="button" id="cpSubmit" disabled>SUBMIT ENTRY</button>
+        </div>
+    </div>
+
+    <script src="fx.js?v=20261123k"></script>
+    <script src="wordcount.js?v=20261123k"></script>
+    <script src="data-merge.js?v=20261123k"></script>
+    <script type="module" src="sync.js?v=20261123k"></script>
+    <script src="comp-preview.js?v=5"></script>
     <script>
         (async function () {
             const C = window.DPComp, main = document.getElementById('cpMain');
@@ -207,11 +218,6 @@
             document.getElementById('cpCount').innerHTML = `Open now. Closes in <strong>${C.closesIn()}</strong>.`;
             // Close the page at closing time if it's left open
             setTimeout(() => location.reload(), Math.max(1000, comp.closesAt - Date.now() + 1000));
-            const w = st.words || 0;
-            C.map(document.getElementById('cpMap')).update(w, false);
-            document.getElementById('cpWords').textContent = w.toLocaleString();
-            document.getElementById('cpToGo').textContent = w >= B.min ? `Ready to submit` : `${(B.min - w).toLocaleString()} to go to reach ${B.min.toLocaleString()}`;
-            const go = document.getElementById('cpGo');
             const fmt = t => new Date(t).toLocaleString('en-GB', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' });
             const box = document.getElementById('cpEntered');
             const overlay = html => {
@@ -256,16 +262,140 @@
                     o.querySelector('#cpWdCancel').onclick = () => o.remove();
                     o.querySelector('#cpWdGo').onclick = () => {
                         const s2 = C.load(); s2.withdrawnAt = Date.now(); C.save(s2);
-                        o.remove(); drawEntry();
+                        o.remove(); drawEntry(); render(false);
                     };
                 };
             };
             drawEntry();
-            if (st.submittedAt) {
-                go.textContent = 'OPEN YOUR STORY';
-            } else if (st.started) go.textContent = 'CONTINUE YOUR STORY';
-            const e = C.earned(st);
-            document.getElementById('cpBuddies').innerHTML = ['finisher', 'entrant', 'shortlisted', 'champion'].map(k => C.buddyCard(k, e[k])).join('');
+
+            // ── The story, written right here ────────────────────────────────
+            // Saves as you type (like the Write page), plus SYNC AND SAVE.
+            // Preview: kept in this browser; real cloud saving comes with step 1.
+            const ed = document.getElementById('cpEditor'), countEl = document.getElementById('cpCountBar');
+            const sub = document.getElementById('cpSubmit'), saveLine = document.getElementById('cpSaveLine');
+            const closeDay = uk(d.close);
+            let cur = C.load();
+            ed.innerText = cur.text || '';
+            const m = C.map(document.getElementById('cpMap'));
+            document.getElementById('cpBar').hidden = false;
+            window.onFinisher = () => setTimeout(() => showBuddy('finisher'), 1400);
+            const renderBuddies = () => {
+                const e = C.earned(C.load());
+                document.getElementById('cpBuddies').innerHTML = ['finisher', 'entrant', 'shortlisted', 'champion'].map(k => C.buddyCard(k, e[k])).join('');
+            };
+            function setSaveLine(savedAt) {
+                saveLine.textContent = (savedAt
+                    ? `Saved ${new Date(savedAt).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' })}. `
+                    : 'Your story saves as you type. ')
+                    + `Come back any time before it closes on ${closeDay}.`;
+            }
+            function render(animate) {
+                const w = C.words(ed.innerText);
+                m.update(w, animate);
+                const more = w < B.min ? `${(B.min - w).toLocaleString()} to go` : w < B.cap ? 'ready to submit' : "that's the limit";
+                countEl.innerHTML = `<strong>${w.toLocaleString()}</strong> words<span class="cw-count-more"> · ${more}</span>`;
+                const s2 = C.load();
+                sub.disabled = !!s2.submittedAt || w < B.min || w > B.cap;
+                sub.textContent = s2.submittedAt ? (s2.withdrawnAt ? 'WITHDRAWN' : 'ENTERED') : 'SUBMIT ENTRY';
+            }
+            let saveT = null;
+            function persist() {
+                const s2 = C.load();
+                if (!s2.started && C.words(ed.innerText)) { s2.started = Date.now(); s2.typed = 0; s2.pasted = s2.pasted || 0; }
+                s2.text = ed.innerText; s2.words = C.words(s2.text); s2.savedAt = Date.now(); C.save(s2);
+                setSaveLine(s2.savedAt);
+            }
+            document.getElementById('cpSync').onclick = () => {
+                clearTimeout(saveT); persist();
+                if (window.DPFx) DPFx.comic('SAVED!', { tone: 'green' });
+            };
+            // Hard cap: no new words once the story reaches the limit
+            ed.addEventListener('beforeinput', e => {
+                if (!/^insert/.test(e.inputType)) return;
+                if (C.words(ed.innerText) >= B.cap && !/^insertParagraph|^insertLineBreak/.test(e.inputType) && /\S/.test(e.data || ' ')) e.preventDefault();
+            });
+            // Pastes are counted for the Writing Record, and can't push past the limit
+            ed.addEventListener('paste', e => {
+                e.preventDefault();
+                const t = (e.clipboardData || window.clipboardData).getData('text/plain');
+                const room = B.cap - C.words(ed.innerText);
+                if (room <= 0) return;
+                const parts = t.trim().split(/\s+/).slice(0, room);
+                document.execCommand('insertText', false, parts.join(' '));
+                const s2 = C.load(); s2.pasted = (s2.pasted || 0) + parts.length; C.save(s2);
+            });
+            ed.addEventListener('input', () => {
+                render(true); clearTimeout(saveT);
+                saveLine.textContent = 'Saving…';
+                saveT = setTimeout(persist, 600);
+            });
+            // Don't lose the last few keystrokes when leaving
+            window.addEventListener('pagehide', () => { if (saveT) { clearTimeout(saveT); persist(); } });
+            setSaveLine(cur.savedAt);
+            render(false);
+            renderBuddies();
+            if (location.hash === '#story') setTimeout(() => { document.getElementById('cpStoryHead').scrollIntoView({ block: 'start' }); ed.focus(); }, 200);
+
+            // ── Submit ───────────────────────────────────────────────────────
+            const usernameP = window.dpCompetition ? window.dpCompetition.myUsername() : Promise.resolve('');
+            sub.onclick = async () => {
+                clearTimeout(saveT); persist();
+                const s2 = C.load(), username = await usernameP;
+                const w = C.words(s2.text), pasted = s2.pasted || 0;
+                const o = overlay(`
+                    <h2>Submit your entry</h2>
+                    <ul class="cw-check">
+                        <li><b>✓</b>${w.toLocaleString()} words (${B.min.toLocaleString()}–${B.max.toLocaleString()}, with up to 50 over allowed)</li>
+                        <li><b>✓</b>Started after the competition opened</li>
+                        <li><b>✓</b>Age confirmed: 18 or over</li>
+                        <li class="${pasted ? 'bad' : ''}"><b>${pasted ? '!' : '✓'}</b>${pasted ? `${pasted.toLocaleString()} words were pasted in. Judges see this in your Writing Record.` : 'Every word typed in Draft Punk'}</li>
+                    </ul>
+                    <p class="cw-record">The judges get the story exactly as it is now, with an entry code instead of your name, and your Writing Record. Your own copy stays here: you can keep editing it, but changes won't reach the judges.</p>
+                    ${C.creditField(s2.credit, username)}
+                    <p class="cp-err" id="cpSubErr" role="alert"></p>
+                    <label class="dp-acct-tick"><input type="checkbox" id="cpAgree"><span>I wrote this story myself, and I accept the <a href="#cpTermsHead">competition terms</a>.</span></label>
+                    <button type="button" class="dp-acct-btn" id="cpGoSubmit" disabled style="margin-top:10px;">SUBMIT ENTRY</button>
+                    <button type="button" class="dp-acct-later" id="cpNotYet">NOT YET</button>`);
+                C.wireCredit(o);
+                o.querySelector('#cpAgree').onchange = e => { o.querySelector('#cpGoSubmit').disabled = !e.target.checked; };
+                o.querySelector('#cpNotYet').onclick = () => o.remove();
+                o.querySelector('a[href="#cpTermsHead"]').onclick = () => { o.remove(); document.querySelector('.cp-terms').open = true; };
+                o.querySelector('#cpGoSubmit').onclick = () => {
+                    const credit = C.readCredit(o, username);
+                    if (credit.error) { o.querySelector('#cpSubErr').textContent = credit.error; return; }
+                    const s3 = C.load(); s3.credit = credit; s3.submittedAt = Date.now(); s3.code = 'DP-2026-01-0042'; s3.frozen = s3.text; C.save(s3);
+                    o.remove(); render(false); drawEntry(); renderBuddies();
+                    if (window.DPFx) DPFx.comic('ENTERED!', { tone: 'green' });
+                    setTimeout(() => {
+                        const b = C.BUDDIES.entrant;
+                        const c = overlay(`
+                            <h2>You're in</h2>
+                            <p>Your entry code is</p>
+                            <div class="cw-code">${C.esc(s3.code)}</div>
+                            <div class="cw-new">
+                                <p class="cp-tier">NEW COMPETITION BUDDY · ${b.tier}</p>
+                                <div class="cp-sprite" style="background-image:url(competition-buddies/${b.img}.png)"></div>
+                                <p class="cp-bname">${b.name}</p><p class="cp-how">${b.fact}</p>
+                            </div>
+                            <p class="cw-record">If it wins, it's credited to ${C.esc(C.creditLabel(s3.credit))}. The shortlist and winner are announced after judging. You can change your credit or withdraw just above your story.</p>
+                            <button type="button" class="dp-acct-btn" id="cpOk">BACK TO MY STORY</button>`);
+                        c.querySelector('#cpOk').onclick = () => { c.remove(); box.scrollIntoView({ block: 'center' }); };
+                    }, 1200);
+                };
+            };
+            function showBuddy(key) {
+                const b = C.BUDDIES[key];
+                renderBuddies();
+                const o = overlay(`
+                    <div class="cw-new" style="margin-top:0;">
+                        <p class="cp-tier">NEW COMPETITION BUDDY · ${b.tier}</p>
+                        <div class="cp-sprite${b.frames === 6 ? ' f6' : ''}" style="background-image:url(competition-buddies/${b.img}.png)"></div>
+                        <p class="cp-bname">${b.name}</p><p class="cp-how">${b.fact}</p>
+                    </div>
+                    <p class="cw-record">You've beaten the final boss. Submit any time before the competition closes, up to ${B.cap.toLocaleString()} words.</p>
+                    <button type="button" class="dp-acct-btn" id="cpKeep">KEEP WRITING</button>`);
+                o.querySelector('#cpKeep').onclick = () => { o.remove(); ed.focus(); };
+            }
             document.getElementById('cpReset').onclick = () => { C.reset(); location.reload(); };
         })();
     </script>
