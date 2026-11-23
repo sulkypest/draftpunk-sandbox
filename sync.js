@@ -1029,6 +1029,7 @@ window.dpAdmin = {
         const minWords = Math.round(Number(c.minWords)), maxWords = Math.round(Number(c.maxWords));
         const rec = {
             title: String(c.title || '').slice(0, 120),
+            prize: String(c.prize || '').slice(0, 200),
             minWords, maxWords, halfway: Math.round(minWords / 2), capWords: maxWords + 50,
             opensAt: Number(c.opensAt), closesAt: Number(c.closesAt),
             status: c.status === 'published' ? 'published' : 'draft',

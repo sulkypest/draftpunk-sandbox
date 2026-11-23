@@ -7,9 +7,9 @@
     <meta name="robots" content="noindex">
     <title>COMPETITION — DRAFT PUNK</title>
     <link rel="icon" href="DRAFTPUNK.png" type="image/png">
-    <link rel="stylesheet" href="style.css?v=20261123d">
-    <script src="sentry.js?v=20261123d"></script>
-    <link rel="stylesheet" href="comp-preview.css?v=2">
+    <link rel="stylesheet" href="style.css?v=20261123e">
+    <script src="sentry.js?v=20261123e"></script>
+    <link rel="stylesheet" href="comp-preview.css?v=3">
 </head>
 <body class="sb-ready">
     <nav class="app-nav">
@@ -65,6 +65,7 @@
             <div class="cp-fact"><dt>OPENS</dt><dd id="cpOpens"></dd></div>
             <div class="cp-fact"><dt>CLOSES</dt><dd id="cpCloses"></dd></div>
         </dl>
+        <p class="cp-prize" id="cpPrize"></p>
         <p class="cp-count" id="cpCount"></p>
 
         <section class="cp-theme" aria-labelledby="cpThemeHead">
@@ -99,16 +100,70 @@
         <section class="cp-sec" aria-labelledby="cpTermsHead">
             <details class="cp-terms">
                 <summary><h2 id="cpTermsHead">FULL TERMS AND CONDITIONS</h2></summary>
-                <div class="cp-terms-body">
-                    <p class="cp-placeholder">Full wording to be written and checked by your solicitor. It will cover:</p>
+                <div class="cp-terms-body" id="cpTerms">
+                    <p>These terms apply to this competition, alongside Draft Punk's <a href="terms.html">Terms</a> and <a href="privacy.html">Privacy</a> notice. By submitting an entry you accept them.</p>
+
+                    <h3>1. Who can enter</h3>
                     <ul class="cp-rules">
-                        <li>Who can enter: writers aged 18 and over, one entry each</li>
-                        <li>How entries are written and submitted, and the word count</li>
-                        <li>Judging, and how the shortlist and winner are chosen</li>
-                        <li>Prizes, including ID checks before payment</li>
-                        <li>Copyright, and permission to publish winning stories</li>
-                        <li>Disqualification, including pasted or imported text</li>
+                        <li>You must be 18 or over and have a Draft Punk account in good standing. Writers under 18 can read the competition but can't enter.</li>
+                        <li>Judges, anyone involved in running the competition, and their families can't enter.</li>
+                        <li>One entry per writer.</li>
                     </ul>
+
+                    <h3>2. Dates</h3>
+                    <ul class="cp-rules">
+                        <li>The competition opens and closes at the times shown above, in UK time. The theme is revealed when it opens.</li>
+                        <li>Entries can only be started and submitted between those times. Late entries can't be accepted.</li>
+                    </ul>
+
+                    <h3>3. Your story</h3>
+                    <ul class="cp-rules">
+                        <li>Your story must respond to the theme, and be written in the competition's writing screen in Draft Punk after the competition opens.</li>
+                        <li>It must be your own work. When you submit, you confirm that you wrote it yourself.</li>
+                        <li>It must not have been published anywhere before, and must not be entered in any other competition while this one is being judged.</li>
+                        <li>It must be <span data-terms="band"></span> words long. Up to 50 words over the maximum is accepted; the writing screen stops there.</li>
+                    </ul>
+
+                    <h3>4. Entering and withdrawing</h3>
+                    <ul class="cp-rules">
+                        <li>When you submit, a copy of your story and its Writing Record is saved as it stands at that moment, and given an entry code. That copy is the one judged. You can't change an entry once it's submitted.</li>
+                        <li>You can withdraw your entry at any time until the winners are announced. A withdrawn entry is removed from judging and can't be entered again.</li>
+                        <li>Your own copy stays yours: you can keep reading, editing and exporting it after you enter and after the competition closes.</li>
+                        <li>Competition stories don't count towards the free plan's project limit, and can't be used as a general project.</li>
+                    </ul>
+
+                    <h3>5. Judging</h3>
+                    <ul class="cp-rules">
+                        <li>Entries are judged by a panel of judges outside the app. Judges see your story, its Writing Record and its entry code, not your name or account. Only the Draft Punk administrator can match an entry code to a writer.</li>
+                        <li>The judges choose a shortlist and a winner. Their decision is final, and no correspondence will be entered into.</li>
+                    </ul>
+
+                    <h3>6. Writing Record and disqualification</h3>
+                    <ul class="cp-rules">
+                        <li>Each entry's Writing Record shows how the story was written, including any pasted or imported text, when it was started and how fast it was written. It is built on your device: strong evidence, not tamper-proof proof.</li>
+                        <li>An entry may be disqualified if it contains pasted or imported text, shows an implausible writing timeline, wasn't written by the entrant, doesn't respond to the theme, or breaks these terms or Draft Punk's Terms.</li>
+                    </ul>
+
+                    <h3>7. Prize</h3>
+                    <ul class="cp-rules">
+                        <li>The prize is: <strong data-terms="prize"></strong>.</li>
+                        <li>Cash prizes are paid only to winners aged 18 or over, after an identity check. If a winner can't complete the identity check, the prize can't be paid.</li>
+                    </ul>
+
+                    <h3>8. Copyright and publication</h3>
+                    <ul class="cp-rules">
+                        <li>You keep all copyright in your story.</li>
+                        <li>By entering, you allow Draft Punk to publish your story in the app or on the Draft Punk website if it wins. You choose whether it's credited to your real name or your username.</li>
+                    </ul>
+
+                    <h3>9. Competition buddies</h3>
+                    <ul class="cp-rules">
+                        <li>This competition's buddies can only be earned while it runs. Shortlisted and Champion buddies are awarded by Draft Punk after judging.</li>
+                        <li>Words written for the competition count towards your streak, XP, buddies and the weekly leaderboard, like any writing in Draft Punk.</li>
+                    </ul>
+
+                    <h3>10. Law and contact</h3>
+                    <p>These terms are governed by the laws of England and Wales. Questions about the competition: <a href="mailto:support@draft-punk.com">support@draft-punk.com</a>.</p>
                 </div>
             </details>
         </section>
@@ -119,15 +174,15 @@
         </section>
     </main>
 
-    <script src="theme.js?v=20261123d"></script>
-    <script src="sidebar.js?v=20261123d"></script>
-    <script src="streak.js?v=20261123d"></script>
-    <script src="streak-ui.js?v=20261123d"></script>
-    <script src="backup.js?v=20261123d"></script>
-    <script src="fx.js?v=20261123d"></script>
-    <script src="data-merge.js?v=20261123d"></script>
+    <script src="theme.js?v=20261123e"></script>
+    <script src="sidebar.js?v=20261123e"></script>
+    <script src="streak.js?v=20261123e"></script>
+    <script src="streak-ui.js?v=20261123e"></script>
+    <script src="backup.js?v=20261123e"></script>
+    <script src="fx.js?v=20261123e"></script>
+    <script src="data-merge.js?v=20261123e"></script>
     <script type="module" src="sync.js?v=20261123e"></script>
-    <script src="comp-preview.js?v=2"></script>
+    <script src="comp-preview.js?v=3"></script>
     <script>
         (async function () {
             const C = window.DPComp, main = document.getElementById('cpMain');
@@ -141,6 +196,11 @@
             document.getElementById('cpTitle').textContent = comp.title;
             document.getElementById('cpBand').textContent = `${B.min.toLocaleString()}–${B.max.toLocaleString()} words`;
             document.getElementById('cpRuleBand').textContent = `Between ${B.min.toLocaleString()} and ${B.max.toLocaleString()} words. Up to 50 over is fine.`;
+            const prizeEl = document.getElementById('cpPrize');
+            prizeEl.hidden = !comp.prize;
+            if (comp.prize) { prizeEl.innerHTML = '<b>PRIZE</b> '; prizeEl.append(comp.prize); }
+            document.querySelectorAll('[data-terms="prize"]').forEach(el => { el.textContent = comp.prize || 'to be confirmed'; });
+                        document.querySelectorAll('[data-terms="band"]').forEach(el => { el.textContent = `between ${B.min.toLocaleString()} and ${B.max.toLocaleString()}`; });
             document.getElementById('cpTheme').textContent = comp.theme;
             document.getElementById('cpOpens').innerHTML = uk(d.open) + '<small>' + local(d.open) + '</small>';
             document.getElementById('cpCloses').innerHTML = uk(d.close) + '<small>' + local(d.close) + '</small>';

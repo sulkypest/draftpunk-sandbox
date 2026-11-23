@@ -3,7 +3,7 @@ const CACHE = 'draftpunk-sandbox-v150';
 const PRECACHE = [
     './',
     './index.html',
-    './style.css?v=20261123d',
+    './style.css?v=20261123e',
     './script.js',
     './fx.js',
     './sidebar.js',

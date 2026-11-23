@@ -63,3 +63,8 @@
         .cp-banner span { font-size: 0.75rem; color: var(--text-dim); }
         .cp-banner[hidden] { display: none; }
         .cp-banner em { font-style: normal; color: var(--neon); font-weight: 900; letter-spacing: 1px; font-size: 0.75rem; }
+        .cp-terms-body h3 { font-size: 0.75rem; letter-spacing: 1px; margin: 16px 0 4px; }
+        .cp-terms-body .cp-rules { margin-top: 4px; }
+        .cp-prize { font-size: 0.8rem; letter-spacing: 1px; margin: 4px 0 8px; }
+        .cp-prize b { color: var(--neon); margin-right: 6px; }
+        .cp-prize[hidden] { display: none; }

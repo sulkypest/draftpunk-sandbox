@@ -139,7 +139,7 @@
             if (st === 'DRAFT' || st === 'SCHEDULED') acts.push(`<button type="button" class="btn-secondary" data-comp="delete" data-id="${esc(c.id)}">DELETE</button>`);
             return `<div class="adm-card adm-comp">
                 <div class="adm-card-top"><span class="adm-tag${st === 'OPEN' ? ' live' : ''}">${st}</span> <strong>${esc(c.title)}</strong></div>
-                <p class="adm-dim">${c.minWords.toLocaleString()}–${c.maxWords.toLocaleString()} words · opens ${ukWhen(c.opensAt)} · closes ${ukWhen(c.closesAt)} (UK)</p>
+                <p class="adm-dim">Prize: ${c.prize ? esc(c.prize) : '<span class="adm-err">not set</span>'} · ${c.minWords.toLocaleString()}–${c.maxWords.toLocaleString()} words · opens ${ukWhen(c.opensAt)} · closes ${ukWhen(c.closesAt)} (UK)</p>
                 ${c.theme ? `<p class="adm-quote">${esc(c.theme)}</p>` : '<p class="adm-err">No theme yet.</p>'}
                 <div class="adm-actions">${acts.join('')}</div>
             </div>`;
@@ -163,12 +163,12 @@
     function editComp(c) {
         const f = $('admCompForm'), st = compState(c);
         resetCompForm();
-        f.id.value = c.id; f.title.value = c.title; f.theme.value = c.theme || '';
+        f.id.value = c.id; f.title.value = c.title; f.theme.value = c.theme || ''; f.prize.value = c.prize || '';
         f.minWords.value = c.minWords; f.maxWords.value = c.maxWords;
         f.opensAt.value = toUk(c.opensAt); f.closesAt.value = toUk(c.closesAt);
         // Once it's open, only the title and closing time can change: changing
-        // the theme, word band or opening time mid-competition isn't fair.
-        if (st === 'OPEN') ['theme', 'minWords', 'maxWords', 'opensAt'].forEach(n => { f[n].disabled = true; });
+        // the theme, prize, word band or opening time mid-competition isn't fair.
+        if (st === 'OPEN') ['theme', 'prize', 'minWords', 'maxWords', 'opensAt'].forEach(n => { f[n].disabled = true; });
         $('admCompCancel').hidden = false;
         compBandLine();
         f.scrollIntoView({ behavior: 'smooth', block: 'start' });
@@ -184,7 +184,7 @@
             const old = comps.find(c => c.id === f.id.value);
             const c = {
                 id: f.id.value || '', createdAt: old ? old.createdAt : 0,
-                title: f.title.value.trim(), theme: f.theme.value.trim(),
+                title: f.title.value.trim(), theme: f.theme.value.trim(), prize: f.prize.value.trim(),
                 minWords: Math.round(+f.minWords.value), maxWords: Math.round(+f.maxWords.value),
                 opensAt: fromUk(f.opensAt.value), closesAt: fromUk(f.closesAt.value),
                 status: publish ? 'published' : 'draft'
@@ -195,6 +195,7 @@
             if (!(c.closesAt > c.opensAt)) { err.textContent = 'Closing has to be after opening.'; return; }
             if (publish) {
                 if (!c.theme) { err.textContent = 'Add the theme before publishing.'; return; }
+                if (!c.prize) { err.textContent = 'Add the prize before publishing.'; return; }
                 const clash = comps.find(o => o.id !== c.id && o.status === 'published' && o.opensAt < c.closesAt && c.opensAt < o.closesAt);
                 if (clash) { err.textContent = `This overlaps "${clash.title}". Only one competition can run at a time.`; return; }
                 if (c.closesAt <= Date.now()) { err.textContent = 'The closing time has already passed.'; return; }
