@@ -1,4 +1,4 @@
-.cp { max-width: 720px; margin: 0 auto; padding: 20px 16px 80px; font-family: var(--font-mono); color: var(--text); }
+.cp { width: 100%; box-sizing: border-box; max-width: 720px; margin: 0 auto; padding: 20px 16px 80px; font-family: var(--font-mono); color: var(--text); }
         .cp-preview { background: var(--neon); color: var(--bg); font-size: 0.7rem; letter-spacing: 2px; padding: 6px 10px; text-align: center; margin-bottom: 18px; }
         .cp-kicker { font-size: 0.7rem; letter-spacing: 3px; color: var(--text-dim); margin: 0 0 6px; }
         .cp-title { font-family: var(--font-display); font-size: clamp(2rem, 8vw, 3rem); line-height: 1; letter-spacing: 1px; margin: 0 0 16px; }
@@ -108,3 +108,5 @@
         main.cp { padding-bottom: 96px; }
         .cw-bar-in .btn-secondary { background: transparent; color: var(--text); border: 2px solid var(--text); }
         @media (max-width: 520px) { .cw-count-more { display: none; } .cw-bar-in { gap: 8px; padding: 8px 10px; } .cw-bar button { padding: 10px 10px; font-size: 0.7rem; letter-spacing: 1px; } .cw-count strong { font-size: 1.2rem; } }
+        .cw-paper, .cp-editor { width: 100%; min-width: 0; box-sizing: border-box; }
+        .cp-editor { overflow-wrap: anywhere; }
