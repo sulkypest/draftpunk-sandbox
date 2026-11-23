@@ -14,7 +14,7 @@
     };
     function load() { try { return JSON.parse(localStorage.getItem(KEY) || '{}'); } catch (e) { return {}; } }
     function save(s) { localStorage.setItem(KEY, JSON.stringify(s)); }
-    function words(text) { const t = String(text || '').trim(); return t ? t.split(/\s+/).length : 0; }
+    function words(text) { if (window.DPWordCount) return window.DPWordCount.countWordsText(text); const t = String(text || '').trim(); return t ? t.split(/\s+/).length : 0; }
     function earned(s) {
         return {
             finisher: (s.defeated || []).includes(BAND.min),
