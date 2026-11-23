@@ -2323,7 +2323,9 @@ window.getCurrentUsername = async function() {
 
 // ── Messaging ─────────────────────────────────────────────────────────────────
 
-window.sendMessage = async function(toUid, toUsername, body) {
+// `about` (optional) ties a message to something, e.g. feedback on a shared
+// chapter: { kind: 'chapter', projectTitle, chapterTitle, chapterId }
+window.sendMessage = async function(toUid, toUsername, body, about) {
     if (!currentUser) return { error: 'Not signed in.' };
     try {
         const snap         = await getDoc(doc(db, 'users', currentUser.uid));
@@ -2335,6 +2337,11 @@ window.sendMessage = async function(toUid, toUsername, body) {
             fromUsername,
             toUsername,
             body:         body.trim().slice(0, 500),
+            ...(about && about.kind === 'chapter' ? { about: {
+                kind: 'chapter',
+                chapterId:    String(about.chapterId || '').slice(0, 100),
+                chapterTitle: String(about.chapterTitle || '').slice(0, 200),
+                projectTitle: String(about.projectTitle || '').slice(0, 200) } } : {}),
             read:         false,
             createdAt:    Date.now()
         });
@@ -2473,20 +2480,27 @@ window.getSharedWithMe = async function() {
 // nothing here touches the share itself, so the writer and other group
 // members are never affected.
 //   shareSeen:   { '<ownerId>|<chapterId>': updatedAt of the version read }
+//   shareReadAt: { '<ownerId>|<chapterId>': when it was last opened }
 //   shareHidden: { '<ownerId>|<projectId>': time hidden (0 = shown again) }
 window.getShareReads = async function() {
-    if (!currentUser) return { seen: {}, hidden: {}, fresh: false };
+    if (!currentUser) return { seen: {}, readAt: {}, hidden: {}, fresh: false };
     try {
-        const [s, h] = await Promise.all([
+        const [s, r, h] = await Promise.all([
             getDoc(doc(db, 'users', currentUser.uid, 'private', 'shareSeen')),
+            getDoc(doc(db, 'users', currentUser.uid, 'private', 'shareReadAt')),
             getDoc(doc(db, 'users', currentUser.uid, 'private', 'shareHidden'))
         ]);
-        return { seen: s.exists() ? s.data() : {}, hidden: h.exists() ? h.data() : {}, fresh: !s.exists() };
-    } catch (err) { return { seen: {}, hidden: {}, fresh: false, error: err.message }; }
+        return { seen: s.exists() ? s.data() : {}, readAt: r.exists() ? r.data() : {}, hidden: h.exists() ? h.data() : {}, fresh: !s.exists() };
+    } catch (err) { return { seen: {}, readAt: {}, hidden: {}, fresh: false, error: err.message }; }
 };
-window.markSharesSeen = async function(map) {
+// map: { key: updatedAt seen }. Pass openedAt when the reader actually opened
+// the chapter (not for the first-visit baseline).
+window.markSharesSeen = async function(map, openedAt) {
     if (!currentUser || !map || !Object.keys(map).length) return;
     try { await setDoc(doc(db, 'users', currentUser.uid, 'private', 'shareSeen'), map, { merge: true }); } catch (err) {}
+    if (!openedAt) return;
+    const at = {}; Object.keys(map).forEach(k => { at[k] = openedAt; });
+    try { await setDoc(doc(db, 'users', currentUser.uid, 'private', 'shareReadAt'), at, { merge: true }); } catch (err) {}
 };
 window.setShareProjectHidden = async function(key, time) {
     if (!currentUser) return { error: 'Not signed in.' };

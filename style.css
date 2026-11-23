@@ -2767,7 +2767,9 @@ body.dp-suspended { padding-bottom: 64px; }
 .swm-proj { font-weight: 900; font-size: 0.8rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .swm-meta { font-size: 0.7rem; color: var(--text-dim); }
 .swm-ch { display: flex; align-items: center; gap: 10px; padding: 8px 12px 8px 32px; border-top: 1px solid var(--border); font-size: 0.78rem; letter-spacing: 1px; }
-.swm-ch-title { flex: 1; min-width: 0; font-weight: 700; }
+.swm-ch-title { flex: 1; min-width: 0; font-weight: 700; display: flex; flex-wrap: wrap; align-items: center; gap: 4px 8px; }
+.swm-was-read { font-weight: 400; font-size: 0.68rem; color: var(--text-dim); white-space: nowrap; }
+.swm-ch-read .swm-ch-title > span:first-child { color: var(--text-dim); }
 .swm-read { width: auto; min-width: unset; font-size: 0.75rem; padding: 6px 10px; letter-spacing: 1px; white-space: nowrap; }
 .swm-foot { display: flex; align-items: center; gap: 10px; padding: 8px 12px 10px 32px; border-top: 1px solid var(--border); font-size: 0.7rem; letter-spacing: 1px; color: var(--text-dim); }
 .swm-foot span { flex: 1; min-width: 0; }
@@ -2776,3 +2778,14 @@ body.dp-suspended { padding-bottom: 64px; }
 .swm-link:hover { color: var(--neon) !important; }
 .swm-hidden-toggle { display: block; margin-top: 6px; }
 .swm-hidden-list { margin-top: 6px; opacity: 0.75; }
+
+.swm-fb { border-top: 1px solid var(--border); margin-top: 12px; padding-top: 12px; text-align: left; }
+.swm-fb-open { width: auto; min-width: unset; padding: 8px 14px; font-size: 0.75rem; letter-spacing: 1px; }
+.swm-fb-note { font-size: 0.7rem; letter-spacing: 1px; color: var(--text-dim); margin: 0; }
+.swm-fb-sent { color: var(--neon); }
+.swm-fb-text { width: 100%; box-sizing: border-box; font-family: inherit; font-size: 0.9rem; line-height: 1.5; resize: vertical; }
+.swm-fb-foot { display: flex; align-items: center; gap: 8px; margin-top: 8px; flex-wrap: wrap; }
+.swm-fb-count, .swm-fb-msg { font-size: 0.7rem; letter-spacing: 1px; color: var(--text-dim); }
+.swm-fb-msg { flex: 1; min-width: 0; }
+.swm-fb-btn { width: auto; min-width: unset; padding: 8px 14px; font-size: 0.7rem; }
+.msg-about { font-size: 0.68rem; letter-spacing: 1px; color: var(--text-dim); border-left: 2px solid var(--neon); padding-left: 6px; margin-bottom: 6px; }

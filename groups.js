@@ -282,7 +282,7 @@ window.doAddFriend = async function() {
 // Grouped as writer + project, each folded to one line. A chapter that reached
 // this reader more than once (directly and through a group) shows once.
 let _sharedWithMeData = [];      // one entry per chapter, after merging duplicates
-let _shareReads = { seen: {}, hidden: {} };
+let _shareReads = { seen: {}, readAt: {}, hidden: {} };
 const _swmOpenProjects = new Set();
 let _swmShowHidden = false;
 
@@ -355,7 +355,7 @@ async function loadSharedWithMe() {
         byChapter.set(k, (sh.updatedAt || 0) > (have.updatedAt || 0) ? { ...sh, via: vias } : { ...have, via: vias });
     });
     _sharedWithMeData = [...byChapter.values()];
-    _shareReads = { seen: reads.seen || {}, hidden: reads.hidden || {} };
+    _shareReads = { seen: reads.seen || {}, readAt: reads.readAt || {}, hidden: reads.hidden || {} };
 
     // First visit after this feature arrives: count what's already here as read,
     // so long-standing shares don't all light up as NEW.
@@ -412,10 +412,14 @@ function renderSharedWithMe() {
         const words = p.chapters.reduce((n, c) => n + (Number(c.wordCount) || 0), 0);
         const rows = !open ? '' : p.chapters.map(sh => {
             const st = swmStatus(sh);
-            return `<div class="swm-ch">
-                <span class="swm-ch-title">${esc(sh.chapterTitle)}${st ? ` <span class="swm-badge">${st === 'new' ? 'NEW' : 'UPDATED'}</span>` : ''}</span>
+            const readAt = _shareReads.readAt[swmChapterKey(sh)];
+            // Past-tense marker: plain dim text, not a box, so it doesn't look tappable
+            const mark = st ? `<span class="swm-badge">${st === 'new' ? 'NEW' : 'UPDATED'}</span>`
+                       : readAt ? `<span class="swm-was-read">READ ${swmAgo(readAt)}</span>` : '';
+            return `<div class="swm-ch${!st && readAt ? ' swm-ch-read' : ''}">
+                <span class="swm-ch-title"><span>${esc(sh.chapterTitle)}</span>${mark}</span>
                 <span class="lb-words">${(Number(sh.wordCount) || 0).toLocaleString()} WDS</span>
-                <button type="button" class="swm-read" data-id="${esc(sh.id)}" onclick="viewShare(this.dataset.id)">READ</button>
+                <button type="button" class="swm-read" data-id="${esc(sh.id)}" onclick="viewShare(this.dataset.id)">OPEN</button>
             </div>`;
         }).join('');
         const foot = !open ? '' : `<div class="swm-foot">
@@ -469,12 +473,60 @@ window.viewShare = function(shareId) {
         type: 'share', uid: share.ownerId, username: share.ownerUsername,
         path: 'shares/' + share.id, excerpt: share.chapterTitle });
     document.getElementById('shareViewOverlay').style.display = 'flex';
-    // Reading it clears its NEW / UPDATED mark
-    const k = swmChapterKey(share);
-    if ((_shareReads.seen[k] || 0) < (share.updatedAt || 1)) {
-        _shareReads.seen[k] = share.updatedAt || 1;
-        window.markSharesSeen({ [k]: share.updatedAt || 1 });
-        renderSharedWithMe();
+    // Opening it clears its NEW / UPDATED mark and records when it was read
+    const k = swmChapterKey(share), now = Date.now();
+    _shareReads.seen[k] = Math.max(_shareReads.seen[k] || 0, share.updatedAt || 1);
+    _shareReads.readAt[k] = now;
+    window.markSharesSeen({ [k]: _shareReads.seen[k] }, now);
+    renderSharedWithMe();
+    swmFeedbackReset(share);
+};
+
+// ── Feedback on a shared chapter → the writer's message inbox ────────────────
+// Direct messages only reach someone who has you as a friend (database rules),
+// so for a writer who shared through a group but isn't a friend, say so
+// instead of offering a button that would fail.
+let _swmFeedbackShare = null;
+function swmFeedbackReset(share) {
+    _swmFeedbackShare = share;
+    const bar = document.getElementById('swmFeedback');
+    if (!bar) return;
+    const isFriend = (_friendsData || []).some(f => f.uid === share.ownerId);
+    const name = esc(share.ownerUsername || 'the writer');
+    if (document.body.classList.contains('dp-under-min')) { bar.innerHTML = ''; return; }
+    bar.innerHTML = isFriend
+        ? `<button type="button" class="btn-secondary swm-fb-open" onclick="swmFeedbackOpen()">✉ SEND FEEDBACK TO ${name}</button>`
+        : `<p class="swm-fb-note">ONLY FRIENDS CAN MESSAGE EACH OTHER. ADD ${name} AS A FRIEND TO SEND FEEDBACK ON THIS CHAPTER.</p>`;
+}
+window.swmFeedbackOpen = function() {
+    const share = _swmFeedbackShare; if (!share) return;
+    document.getElementById('swmFeedback').innerHTML = `
+        <label for="swmFbText" class="grp-label">FEEDBACK ON “${esc(share.chapterTitle)}” · GOES TO ${esc(share.ownerUsername)}’S MESSAGES</label>
+        <textarea id="swmFbText" class="swm-fb-text" maxlength="500" rows="4" oninput="document.getElementById('swmFbCount').textContent = this.value.length + ' / 500'"></textarea>
+        <div class="swm-fb-foot">
+            <span id="swmFbCount" class="swm-fb-count">0 / 500</span>
+            <span id="swmFbMsg" class="swm-fb-msg" role="status"></span>
+            <button type="button" class="grp-cancel-btn swm-fb-btn" onclick="swmFeedbackReset(_swmFeedbackShare)">CANCEL</button>
+            <button type="button" class="swm-fb-btn" id="swmFbSend" onclick="swmFeedbackSend()">SEND</button>
+        </div>`;
+    document.getElementById('swmFbText').focus();
+};
+window.swmFeedbackReset = swmFeedbackReset;
+window.swmFeedbackSend = async function() {
+    const share = _swmFeedbackShare; if (!share) return;
+    const text = document.getElementById('swmFbText').value.trim();
+    const msg  = document.getElementById('swmFbMsg');
+    if (!text) { msg.style.color = '#ff4500'; msg.textContent = 'WRITE SOMETHING FIRST'; return; }
+    const btn = document.getElementById('swmFbSend');
+    btn.disabled = true; msg.style.color = 'var(--text-dim)'; msg.textContent = 'SENDING...';
+    const r = await window.sendMessage(share.ownerId, share.ownerUsername, text,
+        { kind: 'chapter', chapterId: share.chapterId, chapterTitle: share.chapterTitle, projectTitle: share.projectTitle });
+    if (r && r.success) {
+        document.getElementById('swmFeedback').innerHTML =
+            `<p class="swm-fb-note swm-fb-sent">FEEDBACK SENT TO ${esc(share.ownerUsername)}. IT’S IN YOUR MESSAGES TOO.</p>`;
+    } else {
+        btn.disabled = false; msg.style.color = '#ff4500';
+        msg.textContent = 'COULD NOT SEND — YOUR TEXT IS STILL HERE';
     }
 };
 window.onDpBlockChange = function() { closeShareView(); loadAll(); };

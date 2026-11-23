@@ -8,7 +8,7 @@
 (function () {
     const DB_KEY = 'dpSandboxDB';
     const SEED_KEY = 'dpSandboxSeeded';
-    const SEED_VERSION = '5';
+    const SEED_VERSION = '6';
     const rawSet = Storage.prototype.setItem;
     const store = (k, v) => rawSet.call(localStorage, k, v);
 
@@ -112,8 +112,9 @@
         dm('sbx-m3', 'sbx-u1', ME.uid, 'test_ana', 'sandbox_me', 'Test message 2 from test_ana.', 20, false);
         dm('sbx-m4', 'sbx-u2', ME.uid, 'test_ben', 'sandbox_me', 'Test message from test_ben.', 1500, true);
 
-        const members = [ME.uid, 'sbx-u1', 'sbx-u2', 'sbx-u3'];
-        const memberNames = { [ME.uid]: 'sandbox_me', 'sbx-u1': 'test_ana', 'sbx-u2': 'test_ben', 'sbx-u3': 'test_cal' };
+        // test_fay is in the group but not a friend (to test what non-friends can do)
+        const members = [ME.uid, 'sbx-u1', 'sbx-u2', 'sbx-u3', 'sbx-u6'];
+        const memberNames = { [ME.uid]: 'sandbox_me', 'sbx-u1': 'test_ana', 'sbx-u2': 'test_ben', 'sbx-u3': 'test_cal', 'sbx-u6': 'test_fay' };
         db['groups/sbx-g1'] = { name: 'Test Group', ownerId: ME.uid, ownerUsername: 'sandbox_me', members, memberNames, createdAt: now - 7 * day };
         [['sbx-u1', 'test_ana', 'Test group message 1.', 600], ['sbx-u3', 'test_cal', 'Test group message 2.', 400], [ME.uid, 'sandbox_me', 'Test group message 3.', 100], ['sbx-u2', 'test_ben', 'Test group message 4.', 10]]
             .forEach(([from, u, body, mins], i) => { db['groups/sbx-g1/messages/sbx-gm' + i] = { from, fromUsername: u, body, createdAt: now - mins * 60000 }; });
@@ -145,7 +146,10 @@
         addShare('sbx-u1', 'test_ana', 'sbx-ap', 'Test Second Project', 'sbx-a2', 'Test middle', 1, 5, { group: true, seen: 'yes' });
         // test_ben: one group share not yet read
         addShare('sbx-u2', 'test_ben', 'sbx-bp', 'Test Group Story', 'sbx-b1', 'Test group chapter', 0, 1, { group: true });
+        addShare('sbx-u6', 'test_fay', 'sbx-fp', 'Test Non-friend Story', 'sbx-f1', 'Test chapter from a non-friend', 0, 2, { group: true });
         db['users/' + ME.uid + '/private/shareSeen'] = shareSeen;
+        // Some chapters already opened, to show the READ marker
+        db['users/' + ME.uid + '/private/shareReadAt'] = { 'sbx-u3|sbx-c0': now - 3 * day, 'sbx-u3|sbx-c1': now - 2 * day, 'sbx-u3|sbx-c2': now - 5 * 3600000, 'sbx-u3|sbx-c7': now - 9 * day };
         save(db);
         store(SEED_KEY, SEED_VERSION);
     }
