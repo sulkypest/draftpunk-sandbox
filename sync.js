@@ -1066,7 +1066,7 @@ async function readLeaderboardDoc(uid) {
 // A competition only shows up for writers (menu link, dashboard banner,
 // competition page) between its opening and closing times. Published
 // competitions are cached on the device so the link appears without a wait
-// and disappears on time even offline; the cache is refreshed every 2 min.
+// and disappears on time even offline; each page load refreshes it.
 const COMP_CACHE = 'dpCompetitions';
 function compCache() { try { return JSON.parse(localStorage.getItem(COMP_CACHE) || 'null'); } catch (e) { return null; } }
 function liveFrom(list, now = Date.now()) {
@@ -1120,9 +1120,9 @@ function showCompetitionEntry(c) {
 async function checkCompetitions() {
     const cache = compCache();
     showCompetitionEntry(liveFrom(cache && cache.list));
-    if (!cache || Date.now() - cache.at > 2 * 60000) {
-        try { showCompetitionEntry(liveFrom(await fetchCompetitions())); } catch (e) { /* offline: keep the cached view */ }
-    }
+    // Always ask the database on page load; the cached list only makes the
+    // link show instantly (and keeps it working offline) while that runs.
+    try { showCompetitionEntry(liveFrom(await fetchCompetitions())); } catch (e) { /* offline: keep the cached view */ }
 }
 // Show from the cache straight away, and recheck each minute so the link
 // goes at closing time without a reload.
