@@ -155,10 +155,13 @@ function wordRunnerRescued() {
 function backfillBuddies() {
     // One buddy per 5,000 words. (Counts the whole collection, as before, so
     // this doesn't start adding buddies on page load for existing writers.)
+    // The welcome buddy isn't earned by words, so it's left out of the count.
     const expected = Math.floor((state.total || 0) / 5000);
     state.inventory = state.inventory || [];
-    if (state.inventory.length >= expected) return;
-    while (state.inventory.length < expected) {
+    const welcome = window.DPTracker.WELCOME_BUDDY;
+    const counted = () => state.inventory.filter(f => f !== welcome).length;
+    if (counted() >= expected) return;
+    while (counted() < expected) {
         const file = window.DPTracker.rollNewBuddy(state.inventory);
         if (!file) break;
         state.inventory.push(file);
@@ -367,13 +370,15 @@ window.applyCorrection = function() {
     state.lastLevel = BOSS_BEATS.findLastIndex(b => progress >= b.pct);
 
     // Recalculate buddy count — 1 buddy per 5000 words, capped at inventory earned
-    // Word Runner sprint rescues are earned separately and are never removed.
+    // Word Runner sprint rescues and the welcome buddy are not earned by words
+    // and are never removed.
     const expectedBuddies = Math.floor(newTotal / 5000);
     const rescued = wordRunnerRescued();
-    const earned  = state.inventory.filter(b => !rescued.includes(b));
+    const keepAlways = b => rescued.includes(b) || b === window.DPTracker.WELCOME_BUDDY;
+    const earned  = state.inventory.filter(b => !keepAlways(b));
     if (earned.length > expectedBuddies) {
         const keepEarned = earned.slice(0, expectedBuddies);
-        state.inventory = state.inventory.filter(b => rescued.includes(b) || keepEarned.includes(b));
+        state.inventory = state.inventory.filter(b => keepAlways(b) || keepEarned.includes(b));
     }
 
     save(); updateUI(); updateGraph();
@@ -749,9 +754,9 @@ function dashReplay(fromTotal, opts) {
 }
 
 // ── Buddies: latest finds + the full binder ─────────────────────────────────
-// Display only. The binder shows all 100 slots; buddies still to find are
+// Display only. The binder shows every slot (100 + the welcome buddy); buddies still to find are
 // dark silhouettes. Open/closed is remembered on this device only.
-const BUDDY_TOTAL = 100;
+const BUDDY_TOTAL = 101;
 function buddyName(file) {
     const m = /buddy(\d+)\.png/.exec(file || '');
     const b = m && typeof BUDDY_DATA !== 'undefined' ? BUDDY_DATA[parseInt(m[1], 10) - 1] : null;

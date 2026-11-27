@@ -23,7 +23,11 @@
     function todayKey()     { const d = new Date(); return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`; }
     function yesterdayKey() { const d = new Date(); d.setDate(d.getDate() - 1); return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`; }
 
-    const TOTAL_BUDDIES = 100;
+    const TOTAL_BUDDIES = 101;
+    // The welcome buddy: every writer is given it once (welcome.js). It sits in
+    // the normal binder but is never found by writing, so it's left out of the
+    // random pick. New buddies added later go on from 102.
+    const WELCOME_BUDDY = 'buddy101.png';
 
     function writerLevel(xp) { return Math.floor((1 + Math.sqrt(1 + 8 * (xp || 0) / 1000)) / 2); }
 
@@ -43,6 +47,7 @@
         const missing = [];
         for (let i = 1; i <= TOTAL_BUDDIES; i++) {
             const f = `buddy${i}.png`;
+            if (f === WELCOME_BUDDY) continue;
             if (!inventory.includes(f)) missing.push(f);
         }
         return missing.length ? missing[Math.floor(Math.random() * missing.length)] : null;
@@ -126,6 +131,7 @@
         awardWords: awardWords,
         applyPeriodResets: applyPeriodResets,
         rollNewBuddy: rollNewBuddy,
+        WELCOME_BUDDY: WELCOME_BUDDY,
         writerLevel: writerLevel
     };
 })();

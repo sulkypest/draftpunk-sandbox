@@ -2858,3 +2858,25 @@ body.dp-suspended { padding-bottom: 64px; }
 .adm-comp { margin-bottom: 8px; }
 .adm-comp .adm-quote { white-space: pre-wrap; }
 .adm-tag.live { border-color: var(--neon); color: var(--neon); }
+
+/* First-visit tips (tips.js): one at a time, bottom of the screen */
+.dp-tip {
+    position: fixed;
+    left: 50%; transform: translateX(-50%);
+    bottom: calc(16px + env(safe-area-inset-bottom, 0px));
+    z-index: 99;                        /* under the top bar and every dialog */
+    width: min(420px, calc(100vw - 32px));
+    padding: 12px 14px;
+    background: var(--panel); color: var(--text);
+    border: 1px solid var(--neon); border-radius: 6px;
+    box-shadow: 0 4px 14px rgba(0,0,0,0.35);
+}
+.dp-tip-text { margin: 0 0 10px; font-size: 0.9rem; line-height: 1.45; }
+.dp-tip-actions { display: flex; justify-content: flex-end; gap: 8px; }
+.dp-tip-actions button {
+    min-height: 40px; padding: 0 12px; cursor: pointer;
+    font-family: var(--font-mono); font-size: 0.75rem; letter-spacing: 1px;
+    border-radius: 4px; border: 1px solid var(--border);
+    background: transparent; color: var(--text-dim);
+}
+.dp-tip-actions .dp-tip-ok { border-color: var(--neon); color: var(--neon); }

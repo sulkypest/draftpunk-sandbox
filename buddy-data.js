@@ -99,6 +99,7 @@ const BUDDY_DATA = [
     { name: "Dingbat Dennis",       fact: "Decorative. Eccentric. Often used as a section break. ✦" },
     { name: "En Dash Emma",         fact: "Shorter than expected but works harder than you'd think." },
     { name: "Em Dash Emmett",       fact: "Shows up mid-sentence—unexpectedly—and always makes a point of it." },
+    // 101 is the welcome buddy (given to every writer once; see welcome.js)
     { name: "Oxford Comma Olive",   fact: "Insists on being included. Causes arguments at every dinner party." },
     { name: "Interrobang Iggy",     fact: "Is that not the most exciting thing you've ever heard?!" },
     { name: "Ampersand Amos",       fact: "Prefers to be with others & rarely travels alone." },
